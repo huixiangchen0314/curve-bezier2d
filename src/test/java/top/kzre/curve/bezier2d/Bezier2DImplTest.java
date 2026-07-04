@@ -337,6 +337,116 @@ class Bezier2DImplTest {
         assertTrue(Math.abs(pt.getX() - 20) < 5, "x too far");
         assertTrue(Math.abs(pt.getY() - 15) < 10, "y too far");
     }
+
+
+    @Test
+    void sampleHighDensity() {
+        int count = 1001; // 奇数，确保中间点 t=0.5
+        Pair[] pts = impl.sample(curve, count);
+        assertEquals(count, pts.length);
+        // 首尾点精确匹配
+        Pair start = impl.eval(curve, 0.0);
+        assertEquals(start.getX(), pts[0].getX(), 1e-9);
+        assertEquals(start.getY(), pts[0].getY(), 1e-9);
+        Pair end = impl.eval(curve, 1.0);
+        assertEquals(end.getX(), pts[count-1].getX(), 1e-9);
+        assertEquals(end.getY(), pts[count-1].getY(), 1e-9);
+        // 中点（t=0.5）精确对应采样点索引 500
+        Pair midExact = impl.eval(curve, 0.5);
+        Pair midSampled = pts[count/2]; // 1001/2 = 500
+        assertEquals(midExact.getX(), midSampled.getX(), 1e-9);
+        assertEquals(midExact.getY(), midSampled.getY(), 1e-9);
+    }
+
+    @Test
+    void insertPointPrecision() {
+        // 插入点前后，采样1000个点的最大误差
+        Curve copy = new Curve(Arrays.asList(curve.getPoints().get(0).copy(), curve.getPoints().get(1).copy()), false);
+        Pair[] originalSample = impl.sample(curve, 1000);
+        impl.insertPoint(copy, 0.3); // 在 0.3 处插入
+        Pair[] newSample = impl.sample(copy, 1000);
+        double maxErr = 0;
+        for (int i = 0; i < 1000; i++) {
+            double t = (double)i / 999.0;
+            Pair orig = impl.eval(curve, t);
+            Pair modified = impl.eval(copy, t);
+            double err = Math.hypot(orig.getX() - modified.getX(), orig.getY() - modified.getY());
+            maxErr = Math.max(maxErr, err);
+        }
+        // 由于参数化可能微调，比较 closestPoint 距离
+        maxErr = 0;
+        for (int i = 0; i < 1000; i++) {
+            Pair orig = originalSample[i];
+            double dist = impl.closestPoint(copy, orig).getDistance();
+            maxErr = Math.max(maxErr, dist);
+        }
+        assertTrue(maxErr < 1e-6, "Max shape error after insert: " + maxErr);
+    }
+
+    @Test
+    void splitPrecision() {
+        // 分割后，左右段分别采样与原曲线对应区间比较
+        Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
+        Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
+        double splitT = 0.5;
+        impl.split(curve, splitT, left, right);
+
+        // 左段均匀采样 500 点，与对应原曲线 t 比较
+        double maxErr = 0;
+        for (int i = 0; i <= 500; i++) {
+            double u = (double)i / 500.0;
+            double origT = u * splitT;
+            Pair expected = impl.eval(curve, origT);
+            Pair actual = impl.eval(left, u);
+            double err = Math.hypot(expected.getX() - actual.getX(), expected.getY() - actual.getY());
+            maxErr = Math.max(maxErr, err);
+        }
+        assertTrue(maxErr < 1e-6, "Left split max error: " + maxErr);
+
+        // 右段
+        maxErr = 0;
+        for (int i = 0; i <= 500; i++) {
+            double u = (double)i / 500.0;
+            double origT = splitT + u * (1 - splitT);
+            Pair expected = impl.eval(curve, origT);
+            Pair actual = impl.eval(right, u);
+            double err = Math.hypot(expected.getX() - actual.getX(), expected.getY() - actual.getY());
+            maxErr = Math.max(maxErr, err);
+        }
+        assertTrue(maxErr < 1e-6, "Right split max error: " + maxErr);
+    }
+
+    @Test
+    void reformPrecision() {
+        // 增加点数后形状保持不变
+        Curve morePoints = new Curve(Arrays.asList(curve.getPoints().get(0).copy(), curve.getPoints().get(1).copy()), false);
+        impl.reform(morePoints, 10); // 增加到10个控制点
+        assertEquals(10, morePoints.getPoints().size());
+        Pair[] origSample = impl.sample(curve, 500);
+        double maxErr = 0;
+        for (Pair orig : origSample) {
+            double dist = impl.closestPoint(morePoints, orig).getDistance();
+            maxErr = Math.max(maxErr, dist);
+        }
+        assertTrue(maxErr < 1e-6, "Reform increase precision error: " + maxErr);
+    }
+
+    @Test
+    void reversePrecision() {
+        Curve rev = impl.reverse(curve);
+        Pair[] origSample = impl.sample(curve, 500);
+        double maxErr = 0;
+        for (int i = 0; i < 500; i++) {
+            double t = (double)i / 499.0;
+            Pair orig = origSample[i];
+            // 反向曲线在参数 1-t 处应找到原点
+            Pair revPoint = impl.eval(rev, 1 - t);
+            double err = Math.hypot(orig.getX() - revPoint.getX(), orig.getY() - revPoint.getY());
+            maxErr = Math.max(maxErr, err);
+        }
+        assertTrue(maxErr < 1e-6, "Reverse precision error: " + maxErr);
+    }
+
 }
 
 
