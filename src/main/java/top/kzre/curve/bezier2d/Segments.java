@@ -1,0 +1,84 @@
+package top.kzre.curve.bezier2d;
+
+public final class Segments {
+    private Segments() {}
+
+    public static Pair eval(Segment seg, double t) {
+        double mt = 1 - t;
+        double mt2 = mt * mt, t2 = t * t;
+        double x = mt2*mt*seg.getA().getX() + 3*mt2*t*seg.getB().getX()
+                + 3*mt*t2*seg.getC().getX() + t2*t*seg.getD().getX();
+        double y = mt2*mt*seg.getA().getY() + 3*mt2*t*seg.getB().getY()
+                + 3*mt*t2*seg.getC().getY() + t2*t*seg.getD().getY();
+        return new Pair(x, y);
+    }
+
+    public static Pair deriv(Segment seg, double t) {
+        double mt = 1 - t;
+        double dx = 3*(mt*mt*(seg.getB().getX()-seg.getA().getX())
+                + 2*mt*t*(seg.getC().getX()-seg.getB().getX())
+                + t*t*(seg.getD().getX()-seg.getC().getX()));
+        double dy = 3*(mt*mt*(seg.getB().getY()-seg.getA().getY())
+                + 2*mt*t*(seg.getC().getY()-seg.getB().getY())
+                + t*t*(seg.getD().getY()-seg.getC().getY()));
+        return new Pair(dx, dy);
+    }
+
+    public static Pair deriv2(Segment seg, double t) {
+        double mx = seg.getA().getX() - 2*seg.getB().getX() + seg.getC().getX();
+        double my = seg.getA().getY() - 2*seg.getB().getY() + seg.getC().getY();
+        double nx = seg.getB().getX() - 2*seg.getC().getX() + seg.getD().getX();
+        double ny = seg.getB().getY() - 2*seg.getC().getY() + seg.getD().getY();
+        double dx = 6*((1-t)*mx + t*nx);
+        double dy = 6*((1-t)*my + t*ny);
+        return new Pair(dx, dy);
+    }
+
+    public static void split(Segment seg, double t, Segment left, Segment right) {
+        double x0=seg.getA().getX(), y0=seg.getA().getY();
+        double x1=seg.getB().getX(), y1=seg.getB().getY();
+        double x2=seg.getC().getX(), y2=seg.getC().getY();
+        double x3=seg.getD().getX(), y3=seg.getD().getY();
+        double mt = 1-t;
+        double x01=mt*x0+t*x1, y01=mt*y0+t*y1;
+        double x12=mt*x1+t*x2, y12=mt*y1+t*y2;
+        double x23=mt*x2+t*x3, y23=mt*y2+t*y3;
+        double x012=mt*x01+t*x12, y012=mt*y01+t*y12;
+        double x123=mt*x12+t*x23, y123=mt*y12+t*y23;
+        double x0123=mt*x012+t*x123, y0123=mt*y012+t*y123;
+        left.set(new Pair(x0,y0), new Pair(x01,y01), new Pair(x012,y012), new Pair(x0123,y0123));
+        right.set(new Pair(x0123,y0123), new Pair(x123,y123), new Pair(x23,y23), new Pair(x3,y3));
+    }
+
+    public static AABB aabb(Segment seg) {
+        double minX=Double.POSITIVE_INFINITY, minY=Double.POSITIVE_INFINITY;
+        double maxX=Double.NEGATIVE_INFINITY, maxY=Double.NEGATIVE_INFINITY;
+        Pair[] pts = {seg.getA(), seg.getB(), seg.getC(), seg.getD()};
+        for (Pair p : pts) {
+            if (p.getX()<minX) minX=p.getX();
+            if (p.getY()<minY) minY=p.getY();
+            if (p.getX()>maxX) maxX=p.getX();
+            if (p.getY()>maxY) maxY=p.getY();
+        }
+        return new AABB(minX, minY, maxX, maxY);
+    }
+
+    public static Segment translate(Segment seg, double dx, double dy) {
+        return new Segment(
+                new Pair(seg.getA().getX()+dx, seg.getA().getY()+dy),
+                new Pair(seg.getB().getX()+dx, seg.getB().getY()+dy),
+                new Pair(seg.getC().getX()+dx, seg.getC().getY()+dy),
+                new Pair(seg.getD().getX()+dx, seg.getD().getY()+dy));
+    }
+
+    public static Segment scale(Segment seg, double sx, double sy, double cx, double cy) {
+        return new Segment(
+                scalePoint(seg.getA(),sx,sy,cx,cy),
+                scalePoint(seg.getB(),sx,sy,cx,cy),
+                scalePoint(seg.getC(),sx,sy,cx,cy),
+                scalePoint(seg.getD(),sx,sy,cx,cy));
+    }
+    private static Pair scalePoint(Pair p, double sx, double sy, double cx, double cy) {
+        return new Pair(cx+(p.getX()-cx)*sx, cy+(p.getY()-cy)*sy);
+    }
+}
