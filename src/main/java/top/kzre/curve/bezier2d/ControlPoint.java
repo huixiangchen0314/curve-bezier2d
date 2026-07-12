@@ -16,13 +16,13 @@ public final class ControlPoint {
     private double dy2;
     private boolean g1;
 
-    public ControlPoint setX(double x) { this.x = x; return this; }
-    public ControlPoint setY(double y) { this.y = y; return this; }
-    public ControlPoint setDx1(double dx1) { this.dx1 = dx1; return this; }
-    public ControlPoint setDy1(double dy1) { this.dy1 = dy1; return this; }
-    public ControlPoint setDx2(double dx2) { this.dx2 = dx2; return this; }
-    public ControlPoint setDy2(double dy2) { this.dy2 = dy2; return this; }
-    public ControlPoint setG1(boolean g1) { this.g1 = g1; return this; }
+     ControlPoint setX(double x) { this.x = x; return this; }
+     ControlPoint setY(double y) { this.y = y; return this; }
+     ControlPoint setDx1(double dx1) { this.dx1 = dx1; return this; }
+     ControlPoint setDy1(double dy1) { this.dy1 = dy1; return this; }
+     ControlPoint setDx2(double dx2) { this.dx2 = dx2; return this; }
+     ControlPoint setDy2(double dy2) { this.dy2 = dy2; return this; }
+     ControlPoint setG1(boolean g1) { this.g1 = g1; return this; }
 
     public Pair toPosition() { return new Pair(x, y); }
     public Pair toTangentIn() { return new Pair(dx1, dy1); }

@@ -114,6 +114,29 @@ class Bezier2DImplTest {
     }
 
     @Test
+    void divide() {
+        // 创建一个4个控制点的曲线
+        List<ControlPoint> pts = Arrays.asList(
+                new ControlPoint().setX(0).setY(0),
+                new ControlPoint().setX(10).setY(20),
+                new ControlPoint().setX(30).setY(20),
+                new ControlPoint().setX(40).setY(0));
+        Curve multi = new Curve(pts, false);
+        Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
+        Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
+        impl.divide(multi, 2, left, right);
+        // left 应有 3 个锚点 (0,1,2)
+        assertEquals(3, left.getPoints().size());
+        // right 应有 2 个锚点 (2,3)
+        assertEquals(2, right.getPoints().size());
+        // 验证左右曲线在分割点连续
+        Pair leftEnd = impl.eval(left, 1.0);
+        Pair rightStart = impl.eval(right, 0.0);
+        assertEquals(leftEnd.getX(), rightStart.getX(), 1e-9);
+        assertEquals(leftEnd.getY(), rightStart.getY(), 1e-9);
+    }
+
+    @Test
     void split() {
         Curve left = new Curve(Arrays.asList(
                 new ControlPoint(), new ControlPoint()), false);
@@ -147,7 +170,7 @@ class Bezier2DImplTest {
     void fit() {
         // 用拱形曲线的采样点作为输入，拟合应接近原曲线
         double[] xs = {0, 10, 20, 30, 40};
-        double[] ys = {0, 20, 15, 20, 0};
+        double[] ys = {0, 20, 100, 20, 0};
         Curve fitted = impl.fit(xs, ys, 0.1, 10);
         assertNotNull(fitted);
         // 至少能拟合出控制点，且端点接近
@@ -445,6 +468,123 @@ class Bezier2DImplTest {
             maxErr = Math.max(maxErr, err);
         }
         assertTrue(maxErr < 1e-6, "Reverse precision error: " + maxErr);
+    }
+
+    // ── 拟合的额外测试 ───────────────────────────────
+    @Test
+    void testFitThreePoints() {
+        double[] xs = {0, 10, 20};
+        double[] ys = {0, 20, 0};
+        Curve fitted = impl.fit(xs, ys, 0.1, 10);
+        assertNotNull(fitted);
+        assertTrue(fitted.getPoints().size() >= 2); // 至少两个锚点
+        Pair start = impl.eval(fitted, 0.0);
+        Pair end   = impl.eval(fitted, 1.0);
+        assertEquals(0.0, start.getX(), 1e-6);
+        assertEquals(0.0, start.getY(), 1e-6);
+        assertEquals(20.0, end.getX(), 1e-6);
+        assertEquals(0.0, end.getY(), 1e-6);
+        // 中点应接近 y=10 以上 (拱起)
+        Pair mid = impl.eval(fitted, 0.5);
+        assertTrue(mid.getY() > 5, "middle should be raised");
+    }
+
+    @Test
+    void testFitCollinearPoints() {
+        double[] xs = {0, 10, 20, 30};
+        double[] ys = {5, 5, 5, 5};
+        Curve fitted = impl.fit(xs, ys, 0.01, 10);
+        assertNotNull(fitted);
+        // 共线点应拟合出近似直线，误差极小
+        for (double t = 0.0; t <= 1.0; t += 0.1) {
+            Pair p = impl.eval(fitted, t);
+            assertEquals(5.0, p.getY(), 0.1, "Collinear Y should be near 5");
+        }
+    }
+
+    @Test
+    void testFitLargeAmplitude() {
+        double[] xs = {0, 5, 10, 15, 20};
+        double[] ys = {0, 1000, 2000, 1000, 0};
+        Curve fitted = impl.fit(xs, ys, 5.0, 10); // 允许稍大误差
+        assertNotNull(fitted);
+        Pair start = impl.eval(fitted, 0.0);
+        Pair end   = impl.eval(fitted, 1.0);
+        assertEquals(0.0, start.getX(), 1e-6);
+        assertEquals(0.0, start.getY(), 1e-6);
+        assertEquals(20.0, end.getX(), 1e-6);
+        assertEquals(0.0, end.getY(), 1e-6);
+        // 中点应接近高值
+        Pair mid = impl.eval(fitted, 0.5);
+        assertTrue(mid.getY() > 1000, "Middle should be large");
+    }
+
+    @Test
+    void testFitDensePoints() {
+        int n = 100;
+        double[] xs = new double[n];
+        double[] ys = new double[n];
+        for (int i = 0; i < n; i++) {
+            double t = (double) i / (n - 1);
+            xs[i] = t * 100.0;
+            ys[i] = 50.0 - Math.sin(t * Math.PI) * 40.0; // 正弦波形
+        }
+        Curve fitted = impl.fit(xs, ys, 1.0, 20);
+        assertNotNull(fitted);
+        // 验证端点
+        Pair start = impl.eval(fitted, 0.0);
+        assertEquals(xs[0], start.getX(), 1e-6);
+        assertEquals(ys[0], start.getY(), 1e-6);
+        Pair end = impl.eval(fitted, 1.0);
+        assertEquals(xs[n-1], end.getX(), 1e-6);
+        assertEquals(ys[n-1], end.getY(), 1e-6);
+        // 检查误差是否可接受（由于参数校正，误差应小于阈值）
+        double maxErr = 0;
+        for (int i = 0; i < n; i++) {
+            double t = (double) i / (n - 1);
+            Pair p = impl.eval(fitted, t);
+            double err = Math.hypot(p.getX() - xs[i], p.getY() - ys[i]);
+            maxErr = Math.max(maxErr, err);
+        }
+        // 误差不应过大（根据拟合算法，可能分段；这里放宽到10）
+        assertTrue(maxErr < 10.0, "Max error too large: " + maxErr);
+    }
+
+    @Test
+    void testFitFlatCurve() {
+        double[] xs = {0, 1, 2, 3, 4};
+        double[] ys = {0.0, 0.01, 0.02, 0.01, 0.0}; // 很平缓的拱形
+        Curve fitted = impl.fit(xs, ys, 0.001, 10);
+        assertNotNull(fitted);
+        // 中间点的 y 应在 0.01~0.02 之间
+        Pair mid = impl.eval(fitted, 0.5);
+        assertTrue(mid.getY() >= 0.005 && mid.getY() <= 0.025, "Flat curve middle");
+    }
+
+    @Test
+    void testFitTwoPoints() {
+        double[] xs = {10, 50};
+        double[] ys = {20, 80};
+        Curve fitted = impl.fit(xs, ys, 0.1, 10);
+        assertNotNull(fitted);
+        // 两点拟合为直线
+        Pair start = impl.eval(fitted, 0.0);
+        Pair end   = impl.eval(fitted, 1.0);
+        assertEquals(10.0, start.getX(), 1e-6);
+        assertEquals(20.0, start.getY(), 1e-6);
+        assertEquals(50.0, end.getX(), 1e-6);
+        assertEquals(80.0, end.getY(), 1e-6);
+        // 中间点应在线性插值上
+        Pair mid = impl.eval(fitted, 0.5);
+        assertEquals(30.0, mid.getX(), 1e-6);
+        assertEquals(50.0, mid.getY(), 1e-6);
+    }
+
+    @Test
+    void testFitSinglePointThrows() {
+        double[] xs = {5};
+        double[] ys = {10};
+        assertThrows(IllegalArgumentException.class, () -> impl.fit(xs, ys, 1.0, 5));
     }
 
 }

@@ -62,6 +62,38 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     }
 
     @Override
+    public void divide(Curve curve, int idx, Curve out1, Curve out2) {
+        List<ControlPoint> points = curve.getPoints();
+        int n = points.size();
+        if (idx < 0 || idx >= n) {
+            throw new IndexOutOfBoundsException("Index " + idx + " out of bounds [0, " + (n - 1) + "]");
+        }
+        if (n < 2) {
+            throw new IllegalStateException("Curve must have at least 2 points");
+        }
+
+        if (idx == 0) {
+            out1.setPoints(new ArrayList<>());
+            out1.setClosed(false);
+            out2.setPoints(copyControlPoints(points));
+            out2.setClosed(curve.isClosed());
+        } else if (idx == n - 1) {
+            out1.setPoints(copyControlPoints(points));
+            out1.setClosed(curve.isClosed());
+            out2.setPoints(new ArrayList<>());
+            out2.setClosed(false);
+        } else {
+            List<ControlPoint> leftPoints = copyControlPoints(points.subList(0, idx + 1));
+            List<ControlPoint> rightPoints = copyControlPoints(points.subList(idx, n));
+            out1.setPoints(leftPoints);
+            out1.setClosed(false);
+            out2.setPoints(rightPoints);
+            out2.setClosed(false);
+        }
+    }
+
+
+    @Override
     public void split(Curve curve, double t, Curve out1, Curve out2) {
         if (t <= 0) {
             out1.setPoints(new ArrayList<>()); out1.setClosed(false);

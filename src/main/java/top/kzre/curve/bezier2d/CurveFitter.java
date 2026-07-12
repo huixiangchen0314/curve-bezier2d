@@ -8,46 +8,134 @@ public final class CurveFitter {
     public static Curve fit(double[] xs, double[] ys, double maxError, int maxSeg) {
         if (xs == null || ys == null || xs.length != ys.length || xs.length < 2)
             throw new IllegalArgumentException("Invalid input arrays");
-        ChordLengthTable table = new ChordLengthTable(xs, ys);
-        double[] t = table.getParameters();
+
+        double[] t;
+        if (xs.length >= 4) {
+            t = CentripetalParams.centripetal(xs, ys);
+        } else {
+            t = new ChordLengthTable(xs, ys).getParameters();
+        }
         return fitRecursive(xs, ys, t, maxError, maxSeg);
     }
 
     private static Curve fitRecursive(double[] xs, double[] ys, double[] t,
                                       double maxError, int maxSeg) {
-        double[][] ctrl = fitSingle(xs, ys, t);
-        Curve segCurve = buildCurveFromCtrl(ctrl);
-
-        // 误差检测
-        double maxErr = 0;
-        int splitIdx = -1;
-        for (int i = 0; i < xs.length; i++) {
-            Pair p = Bezier2D.eval(segCurve, t[i]);
-            double err = Math.hypot(p.getX() - xs[i], p.getY() - ys[i]);
-            if (err > maxErr) {
-                maxErr = err;
-                splitIdx = i;
+        // 三点输入的特殊处理
+        if (xs.length == 3) {
+            // 尝试直接拟合
+            double[][] ctrl = fitSingle(xs, ys, t);
+            if (!isValidControlPoints(ctrl)) {
+                ctrl = generateSafeLineCtrl(xs, ys);
             }
+            Curve curve = buildCurveFromCtrl(ctrl);
+            double[] refinedT = refineParameters(xs, ys, curve, t);
+            ctrl = fitSingle(xs, ys, refinedT);
+            if (!isValidControlPoints(ctrl)) {
+                ctrl = generateSafeLineCtrl(xs, ys);
+            }
+            curve = buildCurveFromCtrl(ctrl);
+            double maxErr = computeMaxError(xs, ys, curve, refinedT);
+            if (maxErr <= maxError) return curve;
+
+            // 误差仍大，在中点分割
+            double[] leftX = {xs[0], xs[1]};
+            double[] leftY = {ys[0], ys[1]};
+            double[] leftT = new ChordLengthTable(leftX, leftY).getParameters();
+            Curve left = fitRecursive(leftX, leftY, leftT, maxError, maxSeg / 2);
+
+            double[] rightX = {xs[1], xs[2]};
+            double[] rightY = {ys[1], ys[2]};
+            double[] rightT = new ChordLengthTable(rightX, rightY).getParameters();
+            Curve right = fitRecursive(rightX, rightY, rightT, maxError, maxSeg / 2);
+            return Bezier2D.join(left, right);
         }
 
+        // 正常点数 >=4 的处理
+        double[][] ctrl = fitSingle(xs, ys, t);
+        if (!isValidControlPoints(ctrl)) {
+            ctrl = generateSafeLineCtrl(xs, ys);
+        }
+        Curve segCurve = buildCurveFromCtrl(ctrl);
+        double[] refinedT = refineParameters(xs, ys, segCurve, t);
+        ctrl = fitSingle(xs, ys, refinedT);
+        if (!isValidControlPoints(ctrl)) {
+            ctrl = generateSafeLineCtrl(xs, ys);
+        }
+        segCurve = buildCurveFromCtrl(ctrl);
+
+        // 误差检测
+        double maxErr = computeMaxError(xs, ys, segCurve, refinedT);
         if (maxErr <= maxError || maxSeg <= 1 || xs.length < 4)
             return segCurve;
 
-        if (splitIdx <= 0) splitIdx = 1;
-        if (splitIdx >= xs.length - 1) splitIdx = xs.length - 2;
+        // 分割
+        int splitIdx = 0;
+        double maxLocalErr = 0;
+        for (int i = 0; i < xs.length; i++) {
+            Pair p = Bezier2D.eval(segCurve, refinedT[i]);
+            double err = Math.hypot(p.getX() - xs[i], p.getY() - ys[i]);
+            if (err > maxLocalErr) {
+                maxLocalErr = err;
+                splitIdx = i;
+            }
+        }
+        splitIdx = Math.max(1, Math.min(splitIdx, xs.length - 2));
 
-        // 左右子集
         double[] leftX = Arrays.copyOfRange(xs, 0, splitIdx + 1);
         double[] leftY = Arrays.copyOfRange(ys, 0, splitIdx + 1);
         double[] leftT = new ChordLengthTable(leftX, leftY).getParameters();
+        Curve left = fitRecursive(leftX, leftY, leftT, maxError, maxSeg / 2);
 
         double[] rightX = Arrays.copyOfRange(xs, splitIdx, xs.length);
         double[] rightY = Arrays.copyOfRange(ys, splitIdx, ys.length);
         double[] rightT = new ChordLengthTable(rightX, rightY).getParameters();
-
-        Curve left = fitRecursive(leftX, leftY, leftT, maxError, maxSeg / 2);
         Curve right = fitRecursive(rightX, rightY, rightT, maxError, maxSeg / 2);
+
         return Bezier2D.join(left, right);
+    }
+
+    // 参数校正：牛顿法迭代 3 次
+    private static double[] refineParameters(double[] xs, double[] ys, Curve curve, double[] initT) {
+        double[] t = initT.clone();
+        for (int iter = 0; iter < 3; iter++) {
+            for (int i = 1; i < t.length - 1; i++) {
+                Pair p = Bezier2D.eval(curve, t[i]);
+                Pair d1 = Bezier2D.deriv(curve, t[i]);
+                double dx = p.getX() - xs[i];
+                double dy = p.getY() - ys[i];
+                double dot = dx * d1.getX() + dy * d1.getY();
+                double denom = d1.getX() * d1.getX() + d1.getY() * d1.getY() + 1e-12;
+                double dt = dot / denom;
+                t[i] = Math.max(0.0, Math.min(1.0, t[i] - dt));
+            }
+        }
+        return t;
+    }
+
+    private static double computeMaxError(double[] xs, double[] ys, Curve curve, double[] t) {
+        double maxErr = 0;
+        for (int i = 0; i < xs.length; i++) {
+            Pair p = Bezier2D.eval(curve, t[i]);
+            double err = Math.hypot(p.getX() - xs[i], p.getY() - ys[i]);
+            if (err > maxErr) maxErr = err;
+        }
+        return maxErr;
+    }
+
+    private static boolean isValidControlPoints(double[][] ctrl) {
+        return Double.isFinite(ctrl[1][0]) && Double.isFinite(ctrl[1][1])
+                && Double.isFinite(ctrl[2][0]) && Double.isFinite(ctrl[2][1]);
+    }
+
+    private static double[][] generateSafeLineCtrl(double[] xs, double[] ys) {
+        double x0 = xs[0], y0 = ys[0];
+        double x3 = xs[xs.length-1], y3 = ys[ys.length-1];
+        return new double[][]{
+                {x0, y0},
+                {x0 + (x3 - x0) / 3, y0 + (y3 - y0) / 3},
+                {x0 + 2*(x3 - x0) / 3, y0 + 2*(y3 - y0) / 3},
+                {x3, y3}
+        };
     }
 
     /**
@@ -101,5 +189,4 @@ public final class CurveFitter {
                 .setDy1(ctrl[2][1] - ctrl[3][1]);
         return new Curve(Arrays.asList(start, end), false);
     }
-
 }

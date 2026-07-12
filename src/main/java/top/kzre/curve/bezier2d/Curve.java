@@ -1,19 +1,15 @@
 package top.kzre.curve.bezier2d;
 
-import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
-@Builder
 @ToString
 @Getter
 public final class Curve {
-    @Builder.Default
-    private List<ControlPoint> points = new ArrayList<>();
+    private final List<ControlPoint> points;
     private boolean closed;
 
     public Curve(List<ControlPoint> controlPoints, boolean closed) {
@@ -35,30 +31,6 @@ public final class Curve {
     }
     public Curve setClosed(boolean closed) {
         this.closed = closed;
-        return this;
-    }
-
-    public int getDegree() {
-        return points.size() - 1;
-    }
-
-    public Curve applyConstraints() {
-        points.forEach(ControlPoint::applyConstraints);
-        return this;
-    }
-
-    public Curve appendPoint(ControlPoint controlPoint) {
-        points.add(controlPoint);
-        return this;
-    }
-
-    public Curve insertPoint(ControlPoint controlPoint, int index) {
-        points.add(index, controlPoint);
-        return this;
-    }
-
-    public Curve removePoint(int index) {
-        points.remove(index);
         return this;
     }
 
@@ -105,5 +77,18 @@ public final class Curve {
         if (idx >= totalSegs) idx = totalSegs - 1;
         double localT = scaled - idx;
         return new IndexedSegment(getSegment(idx), localT, idx);
+    }
+
+    /**
+     * 深拷贝当前曲线。
+     * 返回一个新的 Curve 对象，其内部控制点列表由每个控制点的副本组成，
+     * 修改原曲线或新曲线均不会相互影响。
+     */
+    public Curve copy() {
+        List<ControlPoint> copiedPoints = new ArrayList<>(points.size());
+        for (ControlPoint p : points) {
+            copiedPoints.add(p.copy());
+        }
+        return new Curve(copiedPoints, this.closed);
     }
 }

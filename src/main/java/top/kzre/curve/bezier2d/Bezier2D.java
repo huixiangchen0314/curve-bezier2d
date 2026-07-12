@@ -75,6 +75,9 @@ public final class Bezier2D {
         return impl.sample(curve, count);
     }
 
+    public static void divide(Curve curve, int idx, Curve out1, Curve out2) {
+        impl.divide(curve, idx, out1, out2);
+    }
 
     public interface Spec {
         /**
@@ -90,6 +93,7 @@ public final class Bezier2D {
          * 二阶导
          */
          Pair deriv2(Curve curve, double t);
+         void divide(Curve curve, int idx, Curve out1, Curve out2);
 
          void split(Curve curve, double t, Curve out1, Curve out2);
 
