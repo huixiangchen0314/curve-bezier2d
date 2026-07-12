@@ -63,6 +63,21 @@ public final class Segments {
         return new AABB(minX, minY, maxX, maxY);
     }
 
+    /**
+     * 计算贝塞尔段上参数 t 处的曲率。
+     * 曲率公式：κ = |P' × P''| / |P'|^3
+     */
+    public static double curvature(Segment seg, double t) {
+        Pair d1 = deriv(seg, t);
+        Pair d2 = deriv2(seg, t);
+        double cross = d1.getX() * d2.getY() - d1.getY() * d2.getX();
+        double len = Math.hypot(d1.getX(), d1.getY());
+        if (len < 1e-12) {
+            return 0.0;
+        }
+        return cross / (len * len * len);
+    }
+
     public static Segment translate(Segment seg, double dx, double dy) {
         return new Segment(
                 new Pair(seg.getA().getX()+dx, seg.getA().getY()+dy),
@@ -80,5 +95,43 @@ public final class Segments {
     }
     private static Pair scalePoint(Pair p, double sx, double sy, double cx, double cy) {
         return new Pair(cx+(p.getX()-cx)*sx, cy+(p.getY()-cy)*sy);
+    }
+
+    /**
+     * 测试段是否足够平坦，可以用直线段近似。
+     * flatnessSq 是允许的最大距离平方（通常设为 (0.25像素)^2 或类似值）。
+     */
+    public static boolean isFlat(Segment seg, double flatnessSq) {
+        Pair A = seg.getA();
+        Pair D = seg.getD();
+        double dx = D.getX() - A.getX();
+        double dy = D.getY() - A.getY();
+        double lenSq = dx * dx + dy * dy;
+
+        // 如果端点重合，则检查控制点是否也都重合
+        if (lenSq < 1e-12) {
+            return pointDistSq(seg.getB(), A) <= flatnessSq
+                    && pointDistSq(seg.getC(), A) <= flatnessSq;
+        }
+
+        // 控制点 B 和 C 到直线 AD 的垂直距离平方
+        if (pointToLineDistSq(seg.getB(), A, dx, dy, lenSq) > flatnessSq) return false;
+        if (pointToLineDistSq(seg.getC(), A, dx, dy, lenSq) > flatnessSq) return false;
+
+        return true;
+    }
+
+    /** 点到点的欧氏距离平方 */
+    private static double pointDistSq(Pair p, Pair q) {
+        double dx = p.getX() - q.getX();
+        double dy = p.getY() - q.getY();
+        return dx * dx + dy * dy;
+    }
+
+    /** 点到直线（由 A 和方向向量 dx,dy 定义）的垂直距离平方 */
+    private static double pointToLineDistSq(Pair p, Pair A,
+                                            double dx, double dy, double lenSq) {
+        double cross = (p.getX() - A.getX()) * dy - (p.getY() - A.getY()) * dx;
+        return (cross * cross) / lenSq;
     }
 }
