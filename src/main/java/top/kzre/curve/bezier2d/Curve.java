@@ -13,9 +13,9 @@ public final class Curve {
     private boolean closed;
 
     public Curve(List<ControlPoint> controlPoints, boolean closed) {
-        if (controlPoints.size() < 2) {
-            throw new IllegalArgumentException();
-        }
+//        if (controlPoints.size() < 2) {
+//            throw new IllegalArgumentException();
+//        }
         this.points = new ArrayList<>(controlPoints);   // 可变副本
         this.closed = closed;
     }
