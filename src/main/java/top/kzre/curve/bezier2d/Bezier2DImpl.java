@@ -92,6 +92,21 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         }
     }
 
+    @Override
+    public Curve transform(Curve curve, double a, double b, double c, double d, double tx, double ty) {
+        List<ControlPoint> newPts = new ArrayList<>();
+        for (ControlPoint p : curve.getPoints()) {
+            double px = p.getX() * a + p.getY() * c + tx;
+            double py = p.getX() * b + p.getY() * d + ty;
+            double dx1 = p.getDx1() * a + p.getDy1() * c;
+            double dy1 = p.getDx1() * b + p.getDy1() * d;
+            double dx2 = p.getDx2() * a + p.getDy2() * c;
+            double dy2 = p.getDx2() * b + p.getDy2() * d;
+            newPts.add(new ControlPoint(px, py, dx1, dy1, dx2, dy2, p.isG1()));
+        }
+        return new Curve(newPts, curve.isClosed());
+    }
+
 
     @Override
     public void split(Curve curve, double t, Curve out1, Curve out2) {

@@ -79,12 +79,17 @@ public final class Bezier2D {
         impl.divide(curve, idx, out1, out2);
     }
 
+    public static Curve transform(Curve curve, double a, double b, double c, double d, double tx, double ty) {
+        return impl.transform(curve, a, b, c, d, tx, ty);
+    }
+
+
     public interface Spec {
         /**
          * 求值
          */
          Pair eval(Curve curve, double t);
-
+        Curve transform(Curve curve, double a, double b, double c, double d, double tx, double ty);
         /**
          * 一阶导
          */
@@ -102,6 +107,7 @@ public final class Bezier2D {
          Curve translate(Curve curve, double dx, double dy);
 
          Curve scale(Curve curve, double sx, double sy, double cx, double cy);
+
 
          Curve fit(double[] xs, double[] ys, double maxError, int maxSeg);
 

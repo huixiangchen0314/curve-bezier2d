@@ -1,15 +1,18 @@
 package top.kzre.curve.bezier2d;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@NoArgsConstructor
 @ToString
 @Getter
 public final class Curve {
-    private final List<ControlPoint> points;
+    private List<ControlPoint> points;
     private boolean closed;
 
     public Curve(List<ControlPoint> controlPoints, boolean closed) {
@@ -25,8 +28,7 @@ public final class Curve {
     }
 
     public Curve setPoints(List<ControlPoint> points) {
-        this.points.clear();
-        this.points.addAll(points);
+        this.points = points;
         return this;
     }
     public Curve setClosed(boolean closed) {
