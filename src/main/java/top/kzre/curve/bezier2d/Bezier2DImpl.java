@@ -191,8 +191,10 @@ public class Bezier2DImpl implements Bezier2D.Spec {
 
         ControlPoint merged = new ControlPoint()
                 .setX(mx).setY(my)
-                .setDx2(leftDeriv.getX()/3.0).setDy2(leftDeriv.getY()/3.0)          // 出切
-                .setDx1(-rightDeriv.getX()/3.0).setDy1(-rightDeriv.getY()/3.0)     // 入切反向
+                .setDx2(rightDeriv.getX() / 3.0)    // 出射手柄：来自右段起点切向量
+                .setDy2(rightDeriv.getY() / 3.0)
+                .setDx1(-leftDeriv.getX() / 3.0)    // 入射手柄：来自左段终点切向量的反向
+                .setDy1(-leftDeriv.getY() / 3.0)
                 .setG1(true);
         merged.applyConstraints();
 
