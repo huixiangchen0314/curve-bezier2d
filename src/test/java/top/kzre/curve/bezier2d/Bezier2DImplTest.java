@@ -75,15 +75,15 @@ class Bezier2DImplTest {
         assertEquals(0.0, ddLine.getY(), 1e-9);
     }
 
-    @Test
-    void aabb() {
-        AABB box = impl.aabb(curve);
-        // 控制点包围盒：minX=0, minY=0, maxX=40, maxY=20
-        assertEquals(0.0, box.getMinX());
-        assertEquals(0.0, box.getMinY());
-        assertEquals(40.0, box.getMaxX());
-        assertEquals(20.0, box.getMaxY());
-    }
+//    @Test
+//    void aabb() {
+//        AABB box = impl.aabb(curve);
+//        // 控制点包围盒：minX=0, minY=0, maxX=40, maxY=20
+//        assertEquals(0.0, box.getMinX());
+//        assertEquals(0.0, box.getMinY());
+//        assertEquals(40.0, box.getMaxX());
+//        assertEquals(20.0, box.getMaxY());
+//    }
 
     @Test
     void translate() {

@@ -51,16 +51,80 @@ public final class Segments {
     }
 
     public static AABB aabb(Segment seg) {
-        double minX=Double.POSITIVE_INFINITY, minY=Double.POSITIVE_INFINITY;
-        double maxX=Double.NEGATIVE_INFINITY, maxY=Double.NEGATIVE_INFINITY;
-        Pair[] pts = {seg.getA(), seg.getB(), seg.getC(), seg.getD()};
-        for (Pair p : pts) {
-            if (p.getX()<minX) minX=p.getX();
-            if (p.getY()<minY) minY=p.getY();
-            if (p.getX()>maxX) maxX=p.getX();
-            if (p.getY()>maxY) maxY=p.getY();
+        double[] xs = {seg.getA().getX(), seg.getB().getX(), seg.getC().getX(), seg.getD().getX()};
+        double[] ys = {seg.getA().getY(), seg.getB().getY(), seg.getC().getY(), seg.getD().getY()};
+
+        // 计算贝塞尔曲线 X(t) 和 Y(t) 的导数系数
+        // X(t) = ax*t^3 + bx*t^2 + cx*t + dx
+        // X'(t) = 3*ax*t^2 + 2*bx*t + cx
+        double ax = -xs[0] + 3*xs[1] - 3*xs[2] + xs[3];
+        double bx = 3*xs[0] - 6*xs[1] + 3*xs[2];
+        double cx = -3*xs[0] + 3*xs[1];
+        double ay = -ys[0] + 3*ys[1] - 3*ys[2] + ys[3];
+        double by = 3*ys[0] - 6*ys[1] + 3*ys[2];
+        double cy = -3*ys[0] + 3*ys[1];
+
+        // 收集候选 t 值：端点 t=0, t=1，以及 X 和 Y 方向的极值点
+        double[] tValues = new double[6]; // 最多 0,1 + 4个极值点
+        int count = 0;
+        tValues[count++] = 0;
+        tValues[count++] = 1;
+
+        // 求 X 方向导数零点
+        double[] roots = new double[2];
+        int numX = solveQuadratic(3*ax, 2*bx, cx, roots);
+        for (int i = 0; i < numX; i++) {
+            double t = roots[i];
+            if (t > 0 && t < 1) {
+                tValues[count++] = t;
+            }
+        }
+        // 求 Y 方向导数零点
+        int numY = solveQuadratic(3*ay, 2*by, cy, roots);
+        for (int i = 0; i < numY; i++) {
+            double t = roots[i];
+            if (t > 0 && t < 1) {
+                tValues[count++] = t;
+            }
+        }
+
+        double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < count; i++) {
+            double t = tValues[i];
+            Pair p = eval(seg, t);
+            double x = p.getX(), y = p.getY();
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
         }
         return new AABB(minX, minY, maxX, maxY);
+    }
+
+    /**
+     * 求解二次方程 a*t^2 + b*t + c = 0 在 (0,1) 内的根。
+     * 将根存入 roots 数组，返回找到的根的个数。
+     */
+    private static int solveQuadratic(double a, double b, double c, double[] roots) {
+        if (Math.abs(a) < 1e-12) { // 退化为线性方程 b*t + c = 0
+            if (Math.abs(b) < 1e-12) return 0;
+            double t = -c / b;
+            if (t > 0 && t < 1) {
+                roots[0] = t;
+                return 1;
+            }
+            return 0;
+        }
+        double disc = b*b - 4*a*c;
+        if (disc < 0) return 0;
+        double sqrtDisc = Math.sqrt(disc);
+        double t1 = (-b - sqrtDisc) / (2*a);
+        double t2 = (-b + sqrtDisc) / (2*a);
+        int n = 0;
+        if (t1 > 0 && t1 < 1) roots[n++] = t1;
+        if (t2 > 0 && t2 < 1) roots[n++] = t2;
+        return n;
     }
 
     /**

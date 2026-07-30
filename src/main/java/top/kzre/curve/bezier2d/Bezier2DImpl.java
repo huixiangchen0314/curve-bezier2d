@@ -108,6 +108,7 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     }
 
 
+
     @Override
     public void split(Curve curve, double t, Curve out1, Curve out2) {
         if (t <= 0) {
