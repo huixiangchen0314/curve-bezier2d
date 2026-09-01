@@ -28,25 +28,30 @@ public final class ControlPoint {
     // 包内部可变方法，使用前必须保证所有权
      public ControlPoint setX(double x) { this.x = x; return this; }
     public ControlPoint setY(double y) { this.y = y; return this; }
-    public void setDx1(double dx1) {
+    public ControlPoint setDx1(double dx1) {
          this.dx1 = dx1;
-     }
-    public void setDy1(double dy1) {
+        return this;
+    }
+    public ControlPoint setDy1(double dy1) {
          this.dy1 = dy1;
-     }
-    public void setDx2(double dx2) {
+        return this;
+    }
+    public ControlPoint setDx2(double dx2) {
          this.dx2 = dx2;
-     }
-    public void setDy2(double dy2) {
+        return this;
+    }
+    public ControlPoint setDy2(double dy2) {
          this.dy2 = dy2;
-     }
+        return this;
+    }
 
     // 包内部调用
-    public void applyConstraints() {
+    public ControlPoint applyConstraints() {
         if (g1) {
             double lenIn = Math.hypot(dx1, dy1);
             double lenOut = Math.hypot(dx2, dy2);
-            if (lenOut < 1e-12) { dx1 = 0; dy1 = 0; return; }
+            if (lenOut < 1e-12) { dx1 = 0; dy1 = 0;
+                return this; }
             if (lenIn < 1e-12) {
                 dx1 = -dx2;
                 dy1 = -dy2;
@@ -56,6 +61,7 @@ public final class ControlPoint {
                 dy1 = -dy2 * factor;
             }
         }
+        return this;
     }
 
     public ControlPoint copy() {
