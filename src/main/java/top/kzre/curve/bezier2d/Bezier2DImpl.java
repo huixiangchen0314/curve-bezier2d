@@ -267,13 +267,16 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         newPoints.add(origStart);
         newPoints.add(newAnchor);
         newPoints.add(origEnd);
-        for (int i=idx+2; i<points.size(); i++) newPoints.add(points.get(i).copy());
+        for (int i=idx+2; i<points.size(); i++)
+        {
+            newPoints.add(points.get(i).copy());
+        }
         curve.setPoints(newPoints);
     }
 
     @Override
     public void deletePoint(Curve curve, int idx) {
-        List<ControlPoint> points = curve.getPoints();
+        List<ControlPoint> points = new ArrayList<>(curve.getPoints());
         int n = points.size();
         if (n < 2) throw new IllegalArgumentException("Curve has too few points");
         if (idx < 0 || idx >= n) throw new IndexOutOfBoundsException("Index out of range");

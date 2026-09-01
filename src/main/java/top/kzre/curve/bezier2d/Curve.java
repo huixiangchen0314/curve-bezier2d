@@ -1,21 +1,26 @@
 package top.kzre.curve.bezier2d;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @NoArgsConstructor
-@AllArgsConstructor
+
 @ToString
-@Getter
+
 public final class Curve {
     private List<ControlPoint> points;
+    @Getter
     private boolean closed;
 
+    public Curve(List<ControlPoint> points, boolean closed) {
+        this.points = new ArrayList<>(points);
+        this.closed = closed;
+    }
 
      void setPoints(List<ControlPoint> points) {
         this.points = points;
@@ -24,6 +29,10 @@ public final class Curve {
      void setClosed(boolean closed) {
         this.closed = closed;
      }
+
+    public List<ControlPoint> getPoints() {
+        return Collections.unmodifiableList(points);
+    }
 
     /** 返回曲线包含的三次贝塞尔段的数量 */
     public int getSegmentCount() {
