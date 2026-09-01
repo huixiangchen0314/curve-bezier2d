@@ -35,6 +35,45 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     }
 
     @Override
+    public AABB aabb(Curve curve, int idx) {
+        List<ControlPoint> points = curve.getPoints();
+        int n = points.size();
+        if (idx < 0 || idx >= n) throw new IndexOutOfBoundsException("Index out of range");
+        ControlPoint p = points.get(idx);
+        AABB total =  new AABB(p.getX(), p.getY(), p.getX(), p.getY());
+        if (n == 1) {
+            return total;
+        }
+
+        boolean closed = curve.isClosed();
+        List<Segment> segments = curve.getSegments();
+        int segCount = segments.size();
+
+
+        // 左侧段：点 idx 作为终点
+        int leftSegIdx = idx - 1;
+        if (closed && idx == 0) {
+            leftSegIdx = segCount - 1;
+        }
+        if (leftSegIdx >= 0 && leftSegIdx < segCount) {
+            AABB box = Segments.aabb(segments.get(leftSegIdx));
+            total = total.merge(box);
+        }
+
+        // 右侧段：点 idx 作为起点
+        int rightSegIdx = idx;
+        if (closed && idx == n - 1) {
+            rightSegIdx = segCount - 1;
+        }
+        if (rightSegIdx >= 0 && rightSegIdx < segCount) {
+            AABB box = Segments.aabb(segments.get(rightSegIdx));
+            total = total.merge(box);
+        }
+
+        return total;
+    }
+
+    @Override
     public Curve translate(Curve curve, double dx, double dy) {
         List<ControlPoint> newPts = new ArrayList<>();
         for (ControlPoint p : curve.getPoints()) {

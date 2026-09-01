@@ -99,6 +99,10 @@ public final class Bezier2D {
         return impl.transform(curve, mat2d[0], mat2d[1], mat2d[2], mat2d[3], mat2d[4], mat2d[5]);
     }
 
+    public static AABB aabb(Curve curve, int idx ){
+        return  impl.aabb(curve, idx);
+    }
+
 
     public interface Spec {
         /**
@@ -115,6 +119,8 @@ public final class Bezier2D {
         void split(Curve curve, double t, Curve out1, Curve out2);
 
          AABB aabb(Curve curve);
+
+         AABB aabb(Curve curve, int idx );
 
          Curve translate(Curve curve, double dx, double dy);
 

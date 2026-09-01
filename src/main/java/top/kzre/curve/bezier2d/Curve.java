@@ -9,9 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 @NoArgsConstructor
-
 @ToString
-
 public final class Curve {
     private List<ControlPoint> points;
     @Getter
