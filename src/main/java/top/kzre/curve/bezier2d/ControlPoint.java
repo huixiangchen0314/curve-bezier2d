@@ -26,23 +26,23 @@ public final class ControlPoint {
         applyConstraints();
     }
     // 包内部可变方法，使用前必须保证所有权
-     ControlPoint setX(double x) { this.x = x; return this; }
-     ControlPoint setY(double y) { this.y = y; return this; }
-     void setDx1(double dx1) {
+     public ControlPoint setX(double x) { this.x = x; return this; }
+    public ControlPoint setY(double y) { this.y = y; return this; }
+    public void setDx1(double dx1) {
          this.dx1 = dx1;
      }
-     void setDy1(double dy1) {
+    public void setDy1(double dy1) {
          this.dy1 = dy1;
      }
-     void setDx2(double dx2) {
+    public void setDx2(double dx2) {
          this.dx2 = dx2;
      }
-     void setDy2(double dy2) {
+    public void setDy2(double dy2) {
          this.dy2 = dy2;
      }
 
     // 包内部调用
-    private void applyConstraints() {
+    public void applyConstraints() {
         if (g1) {
             double lenIn = Math.hypot(dx1, dy1);
             double lenOut = Math.hypot(dx2, dy2);
