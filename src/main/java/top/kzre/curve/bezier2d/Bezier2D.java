@@ -92,6 +92,13 @@ public final class Bezier2D {
         return impl.transform(curve, a, b, c, d, tx, ty);
     }
 
+    public static Curve transform(Curve curve, float[] mat2d) {
+        if (mat2d.length != 6){
+            throw new IllegalArgumentException("Invalid length of mat2d!!");
+        }
+        return impl.transform(curve, mat2d[0], mat2d[1], mat2d[2], mat2d[3], mat2d[4], mat2d[5]);
+    }
+
 
     public interface Spec {
         /**
