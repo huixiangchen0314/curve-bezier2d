@@ -179,14 +179,16 @@ public final class CurveFitter {
 
     /** 从控制点数组构建单段 Curve（锚点+手柄） */
     private static Curve buildCurveFromCtrl(double[][] ctrl) {
-        ControlPoint start = new ControlPoint()
-                .setX(ctrl[0][0]).setY(ctrl[0][1])
-                .setDx2(ctrl[1][0] - ctrl[0][0])
-                .setDy2(ctrl[1][1] - ctrl[0][1]);
-        ControlPoint end = new ControlPoint()
-                .setX(ctrl[3][0]).setY(ctrl[3][1])
-                .setDx1(ctrl[2][0] - ctrl[3][0])
-                .setDy1(ctrl[2][1] - ctrl[3][1]);
+        ControlPoint start = ControlPoint.builder()
+                .x(ctrl[0][0]).y(ctrl[0][1])
+                .dx2(ctrl[1][0] - ctrl[0][0])
+                .dy2(ctrl[1][1] - ctrl[0][1])
+                .build();
+        ControlPoint end = ControlPoint.builder()
+                .x(ctrl[3][0]).y(ctrl[3][1])
+                .dx1(ctrl[2][0] - ctrl[3][0])
+                .dy1(ctrl[2][1] - ctrl[3][1])
+                .build();
         return new Curve(Arrays.asList(start, end), false);
     }
 }

@@ -38,11 +38,12 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     public Curve translate(Curve curve, double dx, double dy) {
         List<ControlPoint> newPts = new ArrayList<>();
         for (ControlPoint p : curve.getPoints()) {
-            newPts.add(new ControlPoint()
-                    .setX(p.getX()+dx).setY(p.getY()+dy)
-                    .setDx1(p.getDx1()).setDy1(p.getDy1())
-                    .setDx2(p.getDx2()).setDy2(p.getDy2())
-                    .setG1(p.isG1()));
+            newPts.add(ControlPoint.builder()
+                    .x(p.getX()+dx).y(p.getY()+dy)
+                    .dx1(p.getDx1()).dy1(p.getDy1())
+                    .dx2(p.getDx2()).dy2(p.getDy2())
+                    .g1(p.isG1())
+                    .build());
         }
         return new Curve(newPts, curve.isClosed());
     }
@@ -52,11 +53,11 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         List<ControlPoint> newPts = new ArrayList<>();
         for (ControlPoint p : curve.getPoints()) {
             double nx = cx + (p.getX()-cx)*sx, ny = cy + (p.getY()-cy)*sy;
-            newPts.add(new ControlPoint()
-                    .setX(nx).setY(ny)
-                    .setDx1(p.getDx1()*sx).setDy1(p.getDy1()*sy)
-                    .setDx2(p.getDx2()*sx).setDy2(p.getDy2()*sy)
-                    .setG1(p.isG1()));
+            newPts.add(ControlPoint.builder()
+                    .x(nx).y(ny)
+                    .dx1(p.getDx1()*sx).dy1(p.getDy1()*sy)
+                    .dx2(p.getDx2()*sx).dy2(p.getDy2()*sy)
+                    .g1(p.isG1()).build());
         }
         return new Curve(newPts, curve.isClosed());
     }
@@ -127,12 +128,15 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         double localT = is.getLocal();
         Segment seg = is.getSegment();
 
-        Segment leftSeg = new Segment(null,null,null,null);
-        Segment rightSeg = new Segment(null,null,null,null);
+        Segment leftSeg = new Segment();
+        Segment rightSeg = new Segment();
         Segments.split(seg, localT, leftSeg, rightSeg);
 
         List<ControlPoint> leftPoints = new ArrayList<>();
-        for (int i = 0; i < idx; i++) leftPoints.add(curve.getPoints().get(i).copy());
+        for (int i = 0; i < idx; i++)
+        {
+            leftPoints.add(curve.getPoints().get(i).copy());
+        }
 
         ControlPoint leftStart = curve.getPoints().get(idx).copy();
         leftStart.setDx2(leftSeg.getB().getX()-leftSeg.getA().getX());
@@ -145,12 +149,14 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         double outDx = rightSeg.getB().getX() - rightSeg.getA().getX();
         double outDy = rightSeg.getB().getY() - rightSeg.getA().getY();
 
-        ControlPoint splitPoint = new ControlPoint()
-                .setX(splitX).setY(splitY)
-                .setDx1(inDx).setDy1(inDy)
-                .setDx2(outDx).setDy2(outDy)
-                .setG1(true);
-        splitPoint.applyConstraints();
+        ControlPoint splitPoint = ControlPoint.builder()
+                .x(splitX).y(splitY)
+                .dx1(inDx).dy1(inDy)
+                .dx2(outDx).dy2(outDy)
+                .g1(true)
+                .build();
+
+
         leftPoints.add(splitPoint);
 
         List<ControlPoint> rightPoints = new ArrayList<>();
@@ -161,10 +167,15 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         rightEnd.setDy1(rightSeg.getC().getY() - rightSeg.getD().getY());
         rightPoints.add(rightEnd);
 
-        for (int i = idx+2; i < curve.getPoints().size(); i++) rightPoints.add(curve.getPoints().get(i).copy());
+        for (int i = idx+2; i < curve.getPoints().size(); i++)
+        {
+            rightPoints.add(curve.getPoints().get(i).copy());
+        }
 
-        out1.setPoints(leftPoints); out1.setClosed(false);
-        out2.setPoints(rightPoints); out2.setClosed(false);
+        out1.setPoints(leftPoints);
+        out1.setClosed(false);
+        out2.setPoints(rightPoints);
+        out2.setClosed(false);
     }
 
     private List<ControlPoint> copyControlPoints(List<ControlPoint> pts) {
@@ -190,19 +201,25 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         Pair leftDeriv = deriv(left, 1.0);
         Pair rightDeriv = deriv(right, 0.0);
 
-        ControlPoint merged = new ControlPoint()
-                .setX(mx).setY(my)
-                .setDx2(rightDeriv.getX() / 3.0)    // 出射手柄：来自右段起点切向量
-                .setDy2(rightDeriv.getY() / 3.0)
-                .setDx1(-leftDeriv.getX() / 3.0)    // 入射手柄：来自左段终点切向量的反向
-                .setDy1(-leftDeriv.getY() / 3.0)
-                .setG1(true);
-        merged.applyConstraints();
+        ControlPoint merged = ControlPoint.builder()
+                .x(mx)
+                .y(my)
+                .dx2(rightDeriv.getX() / 3.0)    // 出射手柄：来自右段起点切向量
+                .dy2(rightDeriv.getY() / 3.0)
+                .dx1(-leftDeriv.getX() / 3.0)    // 入射手柄：来自左段终点切向量的反向
+                .dy1(-leftDeriv.getY() / 3.0)
+                .g1(true)
+                .build();
+
 
         List<ControlPoint> all = new ArrayList<>(lp.size()+rp.size()-1);
-        for (int i=0; i<lp.size()-1; i++) all.add(lp.get(i).copy());
+        for (int i=0; i<lp.size()-1; i++) {
+            all.add(lp.get(i).copy());
+        }
         all.add(merged);
-        for (int i=1; i<rp.size(); i++) all.add(rp.get(i).copy());
+        for (int i=1; i<rp.size(); i++) {
+            all.add(rp.get(i).copy());
+        }
         return new Curve(all, false);
     }
 
@@ -228,12 +245,11 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         double dxOut = rightDeriv.getX()/3.0, dyOut = rightDeriv.getY()/3.0;   // 出切
         double dxIn  = -leftDeriv.getX()/3.0,  dyIn  = -leftDeriv.getY()/3.0;  // 入切反向
 
-        ControlPoint newAnchor = new ControlPoint()
-                .setX(mx).setY(my)
-                .setDx2(dxOut).setDy2(dyOut)
-                .setDx1(dxIn).setDy1(dyIn)
-                .setG1(true);
-        newAnchor.applyConstraints();
+        ControlPoint newAnchor = ControlPoint.builder()
+                .x(mx).y(my)
+                .dx2(dxOut).dy2(dyOut)
+                .dx1(dxIn).dy1(dyIn)
+                .g1(true).build();
 
         ControlPoint origStart = points.get(idx).copy();
         ControlPoint origEnd   = points.get(idx+1).copy();
@@ -294,25 +310,25 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         List<ControlPoint> reversed = new ArrayList<>(original.size());
         for (int i=original.size()-1; i>=0; i--) {
             ControlPoint p = original.get(i);
-            reversed.add(new ControlPoint()
-                    .setX(p.getX()).setY(p.getY())
-                    .setDx2(p.getDx1()).setDy2(p.getDy1())
-                    .setDx1(p.getDx2()).setDy1(p.getDy2())
-                    .setG1(p.isG1()));
+            reversed.add(ControlPoint.builder()
+                    .x(p.getX()).y(p.getY())
+                    .dx2(p.getDx1()).dy2(p.getDy1())
+                    .dx1(p.getDx2()).dy1(p.getDy2())
+                    .g1(p.isG1()).build());
         }
         return new Curve(reversed, curve.isClosed());
     }
 
     @Override
-    public Pair unitTangent(Curve curve, double t) {
+    public Pair tangent(Curve curve, double t) {
         Pair d = deriv(curve, t);
         double len = Math.hypot(d.getX(), d.getY());
         return len<1e-12 ? new Pair(0,0) : new Pair(d.getX()/len, d.getY()/len);
     }
 
     @Override
-    public Pair unitNormal(Curve curve, double t) {
-        Pair tan = unitTangent(curve, t);
+    public Pair normal(Curve curve, double t) {
+        Pair tan = tangent(curve, t);
         return new Pair(-tan.getY(), tan.getX());
     }
 
@@ -341,7 +357,7 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         for (int i=0; i<totalSamples; i++) {
             double t = (double)i/(totalSamples-1);
             Pair pt = eval(curve, t);
-            Pair normal = unitNormal(curve, t);
+            Pair normal = normal(curve, t);
             xs[i] = pt.getX() + distance*normal.getX();
             ys[i] = pt.getY() + distance*normal.getY();
         }

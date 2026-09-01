@@ -2,15 +2,20 @@ package top.kzre.curve.bezier2d;
 
 import lombok.*;
 
+
 @AllArgsConstructor
 @ToString
 @Getter
 @Builder
-public class Segment {
+public final class Segment {
     private Pair a;  // P0
     private Pair b;  // P1
     private Pair c;  // P2
     private Pair d;  // P3
+
+    Segment(){
+
+    }
 
     public static Segment of(ControlPoint a, ControlPoint b) {
         double x0 = a.getX(), y0 = a.getY();
@@ -44,10 +49,13 @@ public class Segment {
         );
     }
 
-    public Segment setA(Pair a) { this.a = a; return this; }
-    public Segment setB(Pair b) { this.b = b; return this; }
-    public Segment setC(Pair c) { this.c = c; return this; }
-    public Segment setD(Pair d) { this.d = d; return this; }
-    public Segment set(Segment s) { this.a = s.a; this.b = s.b; this.c = s.c; this.d = s.d; return this; }
-    public Segment set(Pair a, Pair b, Pair c, Pair d) { this.a = a; this.b = b; this.c = c; this.d = d; return this; }
+    /**
+     * 该方法仅仅用于多返回结果。包内部保证外部不可变性。
+     */
+    Segment set(Pair a, Pair b, Pair c, Pair d) {
+        this.a = a;
+        this.b = b;
+        this.c = c;
+        this.d = d;
+        return this; }
 }

@@ -19,17 +19,17 @@ class Bezier2DImplTest {
         impl = new Bezier2DImpl();
 
         // 创建拱形曲线（两个锚点，带手柄）—— 使用 Arrays.asList 兼容 Java 8
-        ControlPoint start = new ControlPoint()
-                .setX(0).setY(0)
-                .setDx2(10).setDy2(20);
-        ControlPoint end = new ControlPoint()
-                .setX(40).setY(0)
-                .setDx1(-10).setDy1(20);
+        ControlPoint start = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(20).build();
+        ControlPoint end = ControlPoint.builder()
+                .x(40).y(0)
+                .dx1(-10).dy1(20).build();
         curve = new Curve(Arrays.asList(start, end), false);
 
         // 创建直线曲线
-        ControlPoint ls = new ControlPoint().setX(0).setY(0);
-        ControlPoint le = new ControlPoint().setX(40).setY(0);
+        ControlPoint ls = ControlPoint.builder().x(0).y(0).build();
+        ControlPoint le = ControlPoint.builder().x(40).y(0).build();
         lineCurve = new Curve(Arrays.asList(ls, le), false);
     }
 
@@ -117,10 +117,10 @@ class Bezier2DImplTest {
     void divide() {
         // 创建一个4个控制点的曲线
         List<ControlPoint> pts = Arrays.asList(
-                new ControlPoint().setX(0).setY(0),
-                new ControlPoint().setX(10).setY(20),
-                new ControlPoint().setX(30).setY(20),
-                new ControlPoint().setX(40).setY(0));
+                ControlPoint.builder().x(0).y(0).build(),
+                ControlPoint.builder().x(10).y(20).build(),
+                ControlPoint.builder().x(30).y(20).build(),
+                ControlPoint.builder().x(40).y(0).build());
         Curve multi = new Curve(pts, false);
         Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
         Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
@@ -186,11 +186,11 @@ class Bezier2DImplTest {
     void join() {
         // 两条曲线首尾连接
         Curve c1 = new Curve(Arrays.asList(
-                new ControlPoint().setX(0).setY(0),
-                new ControlPoint().setX(20).setY(10)), false);
+                ControlPoint.builder().x(0).y(0).build(),
+                ControlPoint.builder().x(20).y(10).build()), false);
         Curve c2 = new Curve(Arrays.asList(
-                new ControlPoint().setX(20).setY(10),
-                new ControlPoint().setX(40).setY(0)), false);
+                ControlPoint.builder().x(20).y(10).build(),
+                ControlPoint.builder().x(40).y(0).build()), false);
         Curve joined = impl.join(c1, c2);
         // 连接后的曲线在连接点处应 G1 连续，导数方向相反？
         Pair tan1 = impl.deriv(joined, 0.5); // 简单假设连接点在 t=0.5（实际可能不是均匀，但此处仅检查不崩溃）
@@ -227,10 +227,10 @@ class Bezier2DImplTest {
     void deletePoint() {
         // 创建三段曲线（4个锚点），删除中间点
         List<ControlPoint> pts = Arrays.asList(
-                new ControlPoint().setX(0).setY(0),
-                new ControlPoint().setX(10).setY(20),
-                new ControlPoint().setX(30).setY(20),
-                new ControlPoint().setX(40).setY(0));
+                ControlPoint.builder().x(0).y(0).build(),
+                ControlPoint.builder().x(10).y(20).build(),
+                ControlPoint.builder().x(30).y(20).build(),
+                ControlPoint.builder().x(40).y(0).build());
         Curve multi = new Curve(pts, false);
         impl.deletePoint(multi, 1); // 删除第二个点
         assertEquals(3, multi.getPoints().size());
@@ -260,8 +260,8 @@ class Bezier2DImplTest {
     }
 
     @Test
-    void unitTangent() {
-        Pair t0 = impl.unitTangent(curve, 0.0);
+    void tangent() {
+        Pair t0 = impl.tangent(curve, 0.0);
         double len = Math.hypot(t0.getX(), t0.getY());
         assertEquals(1.0, len, 1e-9);
         // 方向应与导数一致
@@ -270,11 +270,11 @@ class Bezier2DImplTest {
     }
 
     @Test
-    void unitNormal() {
-        Pair n = impl.unitNormal(curve, 0.5);
+    void normal() {
+        Pair n = impl.normal(curve, 0.5);
         assertEquals(1.0, Math.hypot(n.getX(), n.getY()), 1e-9);
         // 应与单位切向量正交
-        Pair t = impl.unitTangent(curve, 0.5);
+        Pair t = impl.tangent(curve, 0.5);
         double dot = t.getX() * n.getX() + t.getY() * n.getY();
         assertEquals(0.0, dot, 1e-9);
     }

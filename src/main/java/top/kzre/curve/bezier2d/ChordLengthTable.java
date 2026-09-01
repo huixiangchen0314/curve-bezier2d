@@ -8,8 +8,7 @@ import java.util.List;
  * 弦长表：基于采样点间的直线距离累积，建立参数 t 与弦长 s 的双向映射。
  * 可直接从点序列或从曲线采样构建，用于快速弧长近似或拟合时的弦长参数化。
  */
-public class ChordLengthTable {
-
+public final class ChordLengthTable {
     private final double[] tValues;       // 采样点的均匀参数 t（基于索引）
     private final double[] chordLengths;  // 累积弦长
 

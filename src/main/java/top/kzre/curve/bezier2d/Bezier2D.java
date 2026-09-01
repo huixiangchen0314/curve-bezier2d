@@ -44,6 +44,7 @@ public final class Bezier2D {
     public static void insertPoint(Curve curve, double t) {
         impl.insertPoint(curve, t);
     }
+
     public static void deletePoint(Curve curve, int idx) {
         impl.deletePoint(curve, idx);
     }
@@ -59,11 +60,19 @@ public final class Bezier2D {
     public static Curve reverse(Curve curve) {
         return impl.reverse(curve);
     }
+    @Deprecated
     public static Pair unitTangent(Curve curve, double t) {
-        return impl.unitTangent(curve, t);
+        return impl.tangent(curve, t);
     }
+    @Deprecated
     public static Pair unitNormal(Curve curve, double t) {
-        return impl.unitNormal(curve, t);
+        return impl.normal(curve, t);
+    }
+    public static Pair tangent(Curve curve, double t) {
+        return impl.tangent(curve, t);
+    }
+    public static Pair normal(Curve curve, double t) {
+        return impl.normal(curve, t);
     }
     public static Curve offset(Curve curve, double distance) {
         return impl.offset(curve, distance);
@@ -88,27 +97,21 @@ public final class Bezier2D {
         /**
          * 求值
          */
-         Pair eval(Curve curve, double t);
+        Pair eval(Curve curve, double t);
         Curve transform(Curve curve, double a, double b, double c, double d, double tx, double ty);
 
-        /**
-         * 一阶导
-         */
-         Pair deriv(Curve curve, double t);
-        /**
-         * 二阶导
-         */
-         Pair deriv2(Curve curve, double t);
-         void divide(Curve curve, int idx, Curve out1, Curve out2);
+        Pair deriv(Curve curve, double t);
 
-         void split(Curve curve, double t, Curve out1, Curve out2);
+        Pair deriv2(Curve curve, double t);
+        void divide(Curve curve, int idx, Curve out1, Curve out2);
+
+        void split(Curve curve, double t, Curve out1, Curve out2);
 
          AABB aabb(Curve curve);
 
          Curve translate(Curve curve, double dx, double dy);
 
          Curve scale(Curve curve, double sx, double sy, double cx, double cy);
-
 
          Curve fit(double[] xs, double[] ys, double maxError, int maxSeg);
 
@@ -125,10 +128,10 @@ public final class Bezier2D {
         Curve reverse(Curve curve);
 
         /** 单位切向量 */
-        Pair unitTangent(Curve curve, double t);
+        Pair tangent(Curve curve, double t);
 
         /** 单位法向量（左手系，指向左侧） */
-        Pair unitNormal(Curve curve, double t);
+        Pair normal(Curve curve, double t);
 
         /** 曲线偏移（近似），返回新 Curve */
         Curve offset(Curve curve, double distance);
