@@ -13,6 +13,107 @@ public final class Segments {
         return new Pair(x, y);
     }
 
+
+    /**
+     * 基于四个控制点调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
+     * 保持端点 P0 和 P3 固定，调整控制点 P1 和 P2 沿原方向缩放。
+     * 返回新段。
+     */
+    public static Segment fit(Pair p0, Pair p1, Pair p2, Pair p3, double t, double x, double y) {
+        // 若 t 在端点附近，直接返回原段（端点固定无法调整）
+        if (t < 1e-6 || t > 1 - 1e-6) {
+            return new Segment(p0, p1, p2, p3);
+        }
+
+        // 计算原手柄向量
+        double d1x = p1.getX() - p0.getX();
+        double d1y = p1.getY() - p0.getY();
+        double d2x = p2.getX() - p3.getX();
+        double d2y = p2.getY() - p3.getY();
+
+        // 计算 A = B(t) 在 u=0, v=0 时的位置
+        double mt = 1 - t;
+        double mt2 = mt * mt;
+        double t2 = t * t;
+        double A_x = mt2 * mt * p0.getX() + 3 * mt2 * t * p0.getX()
+                + 3 * mt * t2 * p3.getX() + t2 * t * p3.getX();
+        double A_y = mt2 * mt * p0.getY() + 3 * mt2 * t * p0.getY()
+                + 3 * mt * t2 * p3.getY() + t2 * t * p3.getY();
+
+        // 计算 B1 = 3*(1-t)^2*t * D1
+        double B1x = 3 * mt2 * t * d1x;
+        double B1y = 3 * mt2 * t * d1y;
+        // 计算 B2 = 3*(1-t)*t^2 * D2
+        double B2x = 3 * mt * t2 * d2x;
+        double B2y = 3 * mt * t2 * d2y;
+
+        // 目标偏移量 R = Q - A
+        double Rx = x - A_x;
+        double Ry = y - A_y;
+
+        // 求解线性方程组：B1*u + B2*v = R
+        double det = B1x * B2y - B1y * B2x;
+        double u, v;
+        if (Math.abs(det) > 1e-12) {
+            // 克莱姆法则
+            u = (Rx * B2y - Ry * B2x) / det;
+            v = (B1x * Ry - B1y * Rx) / det;
+        } else {
+            // 奇异情况：取最小二乘解
+            double normB1 = B1x * B1x + B1y * B1y;
+            double normB2 = B2x * B2x + B2y * B2y;
+            if (normB1 > normB2) {
+                u = (Rx * B1x + Ry * B1y) / normB1;
+                v = 0;
+            } else if (normB2 > 1e-12) {
+                u = 0;
+                v = (Rx * B2x + Ry * B2y) / normB2;
+            } else {
+                // 无解，返回原段
+                return new Segment(p0, p1, p2, p3);
+            }
+        }
+
+        // 限制 u, v 在合理范围，避免控制点过度移动（例如 0.1 到 10）
+        double MIN_SCALE = 0.1;
+        double MAX_SCALE = 10.0;
+        u = Math.max(MIN_SCALE, Math.min(u, MAX_SCALE));
+        v = Math.max(MIN_SCALE, Math.min(v, MAX_SCALE));
+
+        // 构造新的控制点
+        Pair newP1 = new Pair(p0.getX() + u * d1x, p0.getY() + u * d1y);
+        Pair newP2 = new Pair(p3.getX() + v * d2x, p3.getY() + v * d2y);
+
+        return new Segment(p0, newP1, newP2, p3);
+    }
+
+    /**
+     * 调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
+     * 保持端点 P0 和 P3 固定，调整控制点 P1 和 P2 沿原方向缩放。
+     * 返回新段。
+     */
+    public static Segment fit(Segment seg, double t, double x, double y) {
+        Pair p0 = seg.getA();
+        Pair p1 = seg.getB();
+        Pair p2 = seg.getC();
+        Pair p3 = seg.getD();
+        return fit(p0, p1, p2, p3, t, x, y);
+    }
+
+    /**
+     * 基于四个 ControlPoint 调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
+     * 保持端点 P0 和 P3 固定，调整控制点 P1 和 P2 沿原方向缩放。
+     * 返回新段。
+     */
+    public static Segment fit(ControlPoint p0, ControlPoint p1, ControlPoint p2, ControlPoint p3,
+                              double t, double x, double y) {
+        Pair pair0 = new Pair(p0.getX(), p0.getY());
+        Pair pair1 = new Pair(p1.getX(), p1.getY());
+        Pair pair2 = new Pair(p2.getX(), p2.getY());
+        Pair pair3 = new Pair(p3.getX(), p3.getY());
+        return fit(pair0, pair1, pair2, pair3, t, x, y);
+    }
+
     public static Pair deriv(Segment seg, double t) {
         double mt = 1 - t;
         double dx = 3*(mt*mt*(seg.getB().getX()-seg.getA().getX())
