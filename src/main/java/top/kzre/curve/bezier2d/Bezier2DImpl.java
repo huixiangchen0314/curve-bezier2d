@@ -37,18 +37,34 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     @Override
     public AABB aabb(Curve curve, int idx) {
         List<ControlPoint> points = curve.getPoints();
-        int n = points.size();
-        if (idx < 0 || idx >= n) throw new IndexOutOfBoundsException("Index out of range");
+        int size = points.size();
+        if (idx < 0 || idx >= size) throw new IndexOutOfBoundsException("Index out of range");
         ControlPoint p = points.get(idx);
         AABB total =  new AABB(p.getX(), p.getY(), p.getX(), p.getY());
-        if (n == 1) {
+        if (size == 1) {
             return total;
         }
+        if (size == 2){
+            Segment seg = curve.getSegment(0);
+            return Segments.aabb(seg);
+        }
+
 
         boolean closed = curve.isClosed();
+
+        if (idx == 0 && !closed)
+        {
+            Segment seg = curve.getSegment(0);
+            return Segments.aabb(seg);
+        }
+
+        if (idx == size - 1 && !closed){
+            Segment seg = curve.getSegment(idx - 1);
+            return Segments.aabb(seg);
+        }
+
         List<Segment> segments = curve.getSegments();
         int segCount = segments.size();
-
 
         // 左侧段：点 idx 作为终点
         int leftSegIdx = idx - 1;
@@ -62,7 +78,7 @@ public class Bezier2DImpl implements Bezier2D.Spec {
 
         // 右侧段：点 idx 作为起点
         int rightSegIdx = idx;
-        if (closed && idx == n - 1) {
+        if (closed && idx == size - 1) {
             rightSegIdx = segCount - 1;
         }
         if (rightSegIdx >= 0 && rightSegIdx < segCount) {
