@@ -57,5 +57,27 @@ public final class Segment {
         this.b = b;
         this.c = c;
         this.d = d;
-        return this; }
+        return this;
+    }
+
+
+
+    /**
+     * 将段的数据写入两个控制点（锚点）。
+     * 更新 p1 的坐标和出切线，p2 的坐标和入切线。
+     */
+    public void write(ControlPoint p1, ControlPoint p2) {
+        // 起点锚点
+        p1.setX(a.getX());
+        p1.setY(a.getY());
+        p1.setDx2(b.getX() - a.getX());  // 出切线 = P1 - P0
+        p1.setDy2(b.getY() - a.getY());
+
+        // 终点锚点
+        p2.setX(d.getX());
+        p2.setY(d.getY());
+        p2.setDx1(c.getX() - d.getX());  // 入切线 = P2 - P3
+        p2.setDy1(c.getY() - d.getY());
+
+    }
 }
