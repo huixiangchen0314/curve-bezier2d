@@ -13,6 +13,18 @@ public final class Segments {
         return new Pair(x, y);
     }
 
+    /**
+     * 调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
+     * 保持端点 P0 和 P3 固定，调整控制点 P1 和 P2 沿原方向缩放。
+     * 返回新段。
+     */
+    public static Segment fit(Segment seg, double t, double x, double y) {
+        Pair p0 = seg.getA();
+        Pair p1 = seg.getB();
+        Pair p2 = seg.getC();
+        Pair p3 = seg.getD();
+        return fit(p0, p1, p2, p3, t, x, y);
+    }
 
     /**
      * 基于四个控制点调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
@@ -85,33 +97,6 @@ public final class Segments {
         Pair newP2 = new Pair(p3.getX() + v * d2x, p3.getY() + v * d2y);
 
         return new Segment(p0, newP1, newP2, p3);
-    }
-
-    /**
-     * 调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
-     * 保持端点 P0 和 P3 固定，调整控制点 P1 和 P2 沿原方向缩放。
-     * 返回新段。
-     */
-    public static Segment fit(Segment seg, double t, double x, double y) {
-        Pair p0 = seg.getA();
-        Pair p1 = seg.getB();
-        Pair p2 = seg.getC();
-        Pair p3 = seg.getD();
-        return fit(p0, p1, p2, p3, t, x, y);
-    }
-
-    /**
-     * 基于四个 ControlPoint 调整贝塞尔段，使其在参数 t 处经过目标点 (x, y)。
-     * 保持端点 P0 和 P3 固定，调整控制点 P1 和 P2 沿原方向缩放。
-     * 返回新段。
-     */
-    public static Segment fit(ControlPoint p0, ControlPoint p1, ControlPoint p2, ControlPoint p3,
-                              double t, double x, double y) {
-        Pair pair0 = new Pair(p0.getX(), p0.getY());
-        Pair pair1 = new Pair(p1.getX(), p1.getY());
-        Pair pair2 = new Pair(p2.getX(), p2.getY());
-        Pair pair3 = new Pair(p3.getX(), p3.getY());
-        return fit(pair0, pair1, pair2, pair3, t, x, y);
     }
 
     public static Pair deriv(Segment seg, double t) {
