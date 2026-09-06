@@ -17,6 +17,43 @@ public final class TableMapping implements ParamMapping {
     @Getter
     private final double maxS;
 
+
+    /**
+     * 将累积长度 s 归一化到 [0,1]，返回新数组。
+     * 若 sParams 为空或长度为零，返回空数组。
+     * 若最大值为零（全零），返回全零数组。
+     */
+    public static double[] uniformSParams(double[] sParams) {
+        if (sParams == null || sParams.length == 0) {
+            return new double[0];
+        }
+        double[] out = new double[sParams.length];
+        uniformSParams(sParams, out);
+        return out;
+    }
+
+    /**
+     * 将累积长度 s 归一化到 [0,1]，结果存入 out。
+     * out 长度必须与 sParams 相同。
+     */
+    public static void uniformSParams(double[] sParams, double[] out) {
+        if (sParams == null || out == null || sParams.length == 0 || out.length != sParams.length) {
+            throw new IllegalArgumentException("sParams and out must be non-null, same length, and non-empty");
+        }
+        double max = sParams[sParams.length - 1];
+        if (max == 0) {
+            Arrays.fill(out, 0.0);
+            return;
+        }
+        for (int i = 0; i < sParams.length; i++) {
+            out[i] = sParams[i] / max;
+        }
+        // 确保首尾精确
+        out[0] = 0.0;
+        out[out.length - 1] = 1.0;
+    }
+
+
     public TableMapping(double[] tParams, double[] sParams) {
         samples = tParams.length;
         this.tParams = tParams;
