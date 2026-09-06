@@ -59,8 +59,9 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         }
 
         if (idx == size - 1 && !closed){
-            Segment seg = curve.getSegment(idx - 1);
-            return Segments.aabb(seg);
+            ControlPoint p1 = points.get(idx - 1);
+            ControlPoint p2 = points.get(idx);
+            return Segments.aabb(Segment.of(p1, p2));
         }
 
         List<Segment> segments = curve.getSegments();

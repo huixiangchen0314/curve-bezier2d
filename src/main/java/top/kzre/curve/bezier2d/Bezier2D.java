@@ -1,5 +1,7 @@
 package top.kzre.curve.bezier2d;
 
+import java.util.List;
+
 public final class Bezier2D {
     private static final Spec impl = new Bezier2DImpl();
 
@@ -90,6 +92,16 @@ public final class Bezier2D {
 
     public static Curve transform(Curve curve, double a, double b, double c, double d, double tx, double ty) {
         return impl.transform(curve, a, b, c, d, tx, ty);
+    }
+
+    public static boolean isStraightLine(Curve curve) {
+        List<ControlPoint> points = curve.getPoints();
+        if (points.size() != 2 || curve.isClosed()) return false;
+        ControlPoint p0 = points.get(0);
+        ControlPoint p1 = points.get(1);
+        boolean p0Straight = Math.abs(p0.getDx2()) < 1e-6 && Math.abs(p0.getDy2()) < 1e-6;
+        boolean p1Straight = Math.abs(p1.getDx1()) < 1e-6 && Math.abs(p1.getDy1()) < 1e-6;
+        return p0Straight && p1Straight;
     }
 
     public static Curve transform(Curve curve, float[] mat2d) {

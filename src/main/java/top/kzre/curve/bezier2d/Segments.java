@@ -140,9 +140,7 @@ public final class Segments {
         double[] xs = {seg.getA().getX(), seg.getB().getX(), seg.getC().getX(), seg.getD().getX()};
         double[] ys = {seg.getA().getY(), seg.getB().getY(), seg.getC().getY(), seg.getD().getY()};
 
-        // 计算贝塞尔曲线 X(t) 和 Y(t) 的导数系数
-        // X(t) = ax*t^3 + bx*t^2 + cx*t + dx
-        // X'(t) = 3*ax*t^2 + 2*bx*t + cx
+        // 计算系数
         double ax = -xs[0] + 3*xs[1] - 3*xs[2] + xs[3];
         double bx = 3*xs[0] - 6*xs[1] + 3*xs[2];
         double cx = -3*xs[0] + 3*xs[1];
@@ -150,9 +148,11 @@ public final class Segments {
         double by = 3*ys[0] - 6*ys[1] + 3*ys[2];
         double cy = -3*ys[0] + 3*ys[1];
 
-        // 收集候选 t 值：端点 t=0, t=1，以及 X 和 Y 方向的极值点
-        double[] tValues = new double[6]; // 最多 0,1 + 4个极值点
+        // 收集候选 t 值
+        double[] tValues = new double[8];
         int count = 0;
+        double eps = 1e-9; // 容差
+
         tValues[count++] = 0;
         tValues[count++] = 1;
 
@@ -161,15 +161,19 @@ public final class Segments {
         int numX = solveQuadratic(3*ax, 2*bx, cx, roots);
         for (int i = 0; i < numX; i++) {
             double t = roots[i];
-            if (t > 0 && t < 1) {
+            if (t > eps && t < 1 - eps) {
                 tValues[count++] = t;
+            } else if (t >= -eps && t <= eps) {
+                // 接近 0，忽略（端点已包含）
+            } else if (t >= 1 - eps && t <= 1 + eps) {
+                // 接近 1，忽略（端点已包含）
             }
         }
         // 求 Y 方向导数零点
         int numY = solveQuadratic(3*ay, 2*by, cy, roots);
         for (int i = 0; i < numY; i++) {
             double t = roots[i];
-            if (t > 0 && t < 1) {
+            if (t > eps && t < 1 - eps) {
                 tValues[count++] = t;
             }
         }
@@ -187,7 +191,10 @@ public final class Segments {
         }
         return new AABB(minX, minY, maxX, maxY);
     }
-
+    public static boolean isStraightLine(ControlPoint start, ControlPoint end) {
+        return Math.abs(start.getDx2()) < 1e-6 && Math.abs(start.getDy2()) < 1e-6 &&
+                Math.abs(end.getDx1()) < 1e-6 && Math.abs(end.getDy1()) < 1e-6;
+    }
     /**
      * 求解二次方程 a*t^2 + b*t + c = 0 在 (0,1) 内的根。
      * 将根存入 roots 数组，返回找到的根的个数。

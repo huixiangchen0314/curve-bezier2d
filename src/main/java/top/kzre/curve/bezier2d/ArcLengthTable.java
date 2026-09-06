@@ -2,56 +2,24 @@ package top.kzre.curve.bezier2d;
 
 import java.util.Arrays;
 
+@Deprecated
 public final class ArcLengthTable {
-    private final Bezier2D.Spec bezier = new Bezier2DImpl();  // 用于求导
-    private final Curve curve;
-    private final int samples;
     private final double[] tValues;
     private final double[] arcLengths;
+    private final double curveLength;
 
-    public ArcLengthTable(Curve curve, int samples) {
-        if (samples < 2) throw new IllegalArgumentException("samples must be at least 2");
-        this.curve = curve;
-        this.samples = samples;
-        this.tValues = new double[samples];
-        this.arcLengths = new double[samples];
-        buildTable();
+    public ArcLengthTable(double[] tParams, double[] arcParams) {
+        if (tParams.length < 2) throw new IllegalArgumentException("samples must be at least 2");
+        this.tValues = tParams;
+        this.arcLengths = arcParams;
+        int size = tValues.length;
+        curveLength = arcLengths[size -1];
     }
 
-    private void buildTable() {
-        for (int i = 0; i < samples; i++) {
-            tValues[i] = (double) i / (samples - 1);
-        }
-        arcLengths[0] = 0.0;
-        double cum = 0.0;
-        for (int i = 0; i < samples - 1; i++) {
-            double t0 = tValues[i];
-            double t1 = tValues[i + 1];
-            double segLen = integrateArcLength(t0, t1, 8);
-            cum += segLen;
-            arcLengths[i + 1] = cum;
-        }
-    }
-
-    private double integrateArcLength(double ta, double tb, int subdiv) {
-        if (subdiv % 2 != 0) subdiv++;
-        double h = (tb - ta) / subdiv;
-        double sum = speed(ta) + speed(tb);
-        for (int i = 1; i < subdiv; i++) {
-            double t = ta + i * h;
-            sum += (i % 2 == 0 ? 2 : 4) * speed(t);
-        }
-        return (h / 3.0) * sum;
-    }
-
-    private double speed(double t) {
-        Pair d = bezier.deriv(curve, t);   // 通过实例调用 deriv
-        return Math.hypot(d.getX(), d.getY());
-    }
 
     // ---------- 公共接口 ----------
     public double totalLength() {
-        return arcLengths[samples - 1];
+        return curveLength;
     }
 
     public double getLength(double t) {
@@ -90,5 +58,42 @@ public final class ArcLengthTable {
             if (low < 0) return 0;
             return Math.min(low, arr.length - 2);
         }
+    }
+
+    /**
+     * 采样曲线构建弦长表
+     */
+    public static ArcLengthTable sample(Curve curve, int samples) {
+        double[] tParams = new double[samples];
+        double[] arcParams = new double[samples];
+        for (int i = 0; i < samples; i++) {
+            tParams[i] = (double) i / (samples - 1);
+        }
+        arcParams[0] = 0.0;
+        double cum = 0.0;
+        for (int i = 0; i < samples - 1; i++) {
+            double t0 = tParams[i];
+            double t1 = tParams[i + 1];
+            double segLen = integrateArcLength(curve, t0, t1, 8);
+            cum += segLen;
+            arcParams[i + 1] = cum;
+        }
+        return new  ArcLengthTable(tParams, arcParams);
+    }
+
+    private static double integrateArcLength(Curve curve, double ta, double tb, int subdiv) {
+        if (subdiv % 2 != 0) subdiv++;
+        double h = (tb - ta) / subdiv;
+        double sum = speed(curve, ta) + speed(curve, tb);
+        for (int i = 1; i < subdiv; i++) {
+            double t = ta + i * h;
+            sum += (i % 2 == 0 ? 2 : 4) * speed(curve, t);
+        }
+        return (h / 3.0) * sum;
+    }
+
+    private static double speed(Curve curve, double t) {
+        Pair d = Bezier2D.deriv(curve, t);   // 通过实例调用 deriv
+        return Math.hypot(d.getX(), d.getY());
     }
 }

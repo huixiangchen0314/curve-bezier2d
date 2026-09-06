@@ -13,7 +13,7 @@ public final class Segment {
     private Pair c;  // P2
     private Pair d;  // P3
 
-    Segment(){
+    public Segment(){
 
     }
 

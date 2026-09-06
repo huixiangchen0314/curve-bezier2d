@@ -3,7 +3,6 @@ package top.kzre.curve.bezier2d;
 import lombok.*;
 
 @Builder
-@AllArgsConstructor
 @ToString
 @Value
 public class AABB {
@@ -11,6 +10,27 @@ public class AABB {
     double minY;
     double maxX;
     double maxY;
+
+    // 自定义构造函数，加入约束
+    public AABB(double minX, double minY, double maxX, double maxY) {
+        // 检查 NaN
+        if (Double.isNaN(minX) || Double.isNaN(minY) ||
+                Double.isNaN(maxX) || Double.isNaN(maxY)) {
+            throw new IllegalArgumentException("Coordinates must not be NaN");
+        }
+        // 检查 min <= max
+        if (minX > maxX) {
+            throw new IllegalArgumentException("minX (" + minX + ") must be <= maxX (" + maxX + ")");
+        }
+        if (minY > maxY) {
+            throw new IllegalArgumentException("minY (" + minY + ") must be <= maxY (" + maxY + ")");
+        }
+
+        this.minX = minX;
+        this.minY = minY;
+        this.maxX = maxX;
+        this.maxY = maxY;
+    }
 
     /**
      * 合并另一个包围盒，返回能同时容纳两者的最小包围盒。

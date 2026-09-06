@@ -8,9 +8,10 @@ import java.util.List;
  * 弦长表：基于采样点间的直线距离累积，建立参数 t 与弦长 s 的双向映射。
  * 可直接从点序列或从曲线采样构建，用于快速弧长近似或拟合时的弦长参数化。
  */
-public final class ChordLengthTable {
-    private final double[] tValues;       // 采样点的均匀参数 t（基于索引）
-    private final double[] chordLengths;  // 累积弦长
+@Deprecated
+public final class ChordLengthTable implements ParamMapping{
+    private final double[] tParams;       // 采样点的均匀参数 t（基于索引）
+    private final double[] sParams;  // 累积弦长
 
     /**
      * 从坐标数组构建弦长表。
@@ -21,18 +22,18 @@ public final class ChordLengthTable {
         if (xs == null || ys == null || xs.length != ys.length || xs.length < 2)
             throw new IllegalArgumentException("Arrays must be non‑null, equal length and at least 2 points");
         int n = xs.length;
-        tValues = new double[n];
-        chordLengths = new double[n];
+        tParams = new double[n];
+        sParams = new double[n];
         for (int i = 0; i < n; i++) {
-            tValues[i] = (double) i / (n - 1);
+            tParams[i] = (double) i / (n - 1);
         }
-        chordLengths[0] = 0;
+        sParams[0] = 0;
         double cum = 0;
         for (int i = 1; i < n; i++) {
             double dx = xs[i] - xs[i - 1];
             double dy = ys[i] - ys[i - 1];
             cum += Math.hypot(dx, dy);
-            chordLengths[i] = cum;
+            sParams[i] = cum;
         }
     }
 
@@ -48,64 +49,66 @@ public final class ChordLengthTable {
             double t = (double) i / (samples - 1);
             pts.add(Bezier2D.eval(curve, t));
         }
-        tValues = new double[samples];
-        chordLengths = new double[samples];
+        tParams = new double[samples];
+        sParams = new double[samples];
         for (int i = 0; i < samples; i++) {
-            tValues[i] = (double) i / (samples - 1);
+            tParams[i] = (double) i / (samples - 1);
         }
-        chordLengths[0] = 0;
+        sParams[0] = 0;
         double cum = 0;
         for (int i = 1; i < samples; i++) {
             Pair p0 = pts.get(i - 1);
             Pair p1 = pts.get(i);
             cum += Math.hypot(p1.getX() - p0.getX(), p1.getY() - p0.getY());
-            chordLengths[i] = cum;
+            sParams[i] = cum;
         }
     }
 
     /** 总弦长 */
     public double totalLength() {
-        return chordLengths[chordLengths.length - 1];
+        return sParams[sParams.length - 1];
     }
 
     /**
-     * 获取每个原始点的归一化弦长参数 t。
+     * 获取每个原始点的归一化弦长参数 s。
      * 数组长度与构造时输入的点数相同，首尾值为 0 和 1。
      */
     public double[] getParameters() {
-        int n = chordLengths.length;
+        int n = sParams.length;
         double total = totalLength();
-        double[] t = new double[n];
+        double[] s = new double[n];
         for (int i = 0; i < n; i++) {
-            t[i] = chordLengths[i] / total;
+            s[i] = sParams[i] / total;
         }
-        t[0] = 0.0;
-        t[n - 1] = 1.0;
-        return t;
+        s[0] = 0.0;
+        s[n - 1] = 1.0;
+        return s;
     }
 
 
 
     /** 给定参数 t ∈ [0,1]，返回对应的弦长 s */
-    public double getLength(double t) {
+    @Override
+    public double getS(double t) {
         if (t <= 0) return 0;
         if (t >= 1) return totalLength();
-        int idx = intervalIndex(tValues, t);
-        double t0 = tValues[idx];
-        double t1 = tValues[idx + 1];
+        int idx = intervalIndex(tParams, t);
+        double t0 = tParams[idx];
+        double t1 = tParams[idx + 1];
         double frac = (t - t0) / (t1 - t0);
-        return chordLengths[idx] + frac * (chordLengths[idx + 1] - chordLengths[idx]);
+        return sParams[idx] + frac * (sParams[idx + 1] - sParams[idx]);
     }
 
     /** 给定弦长 s，返回对应的参数 t */
+    @Override
     public double getT(double s) {
         if (s <= 0) return 0;
         if (s >= totalLength()) return 1;
-        int idx = intervalIndex(chordLengths, s);
-        double s0 = chordLengths[idx];
-        double s1 = chordLengths[idx + 1];
+        int idx = intervalIndex(sParams, s);
+        double s0 = sParams[idx];
+        double s1 = sParams[idx + 1];
         double frac = (s - s0) / (s1 - s0);
-        return tValues[idx] + frac * (tValues[idx + 1] - tValues[idx]);
+        return tParams[idx] + frac * (tParams[idx + 1] - tParams[idx]);
     }
 
     /** 使用二分查找确定 key 所在的区间 [i, i+1]，满足 arr[i] <= key <= arr[i+1] */
