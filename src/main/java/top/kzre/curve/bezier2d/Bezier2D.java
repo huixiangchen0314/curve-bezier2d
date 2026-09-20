@@ -321,8 +321,8 @@ public final class Bezier2D {
      * @param out1  接收左半段（非闭合）
      * @param out2  接收右半段（非闭合）
      */
-    public static void split(Curve curve, double t, Curve out1, Curve out2) {
-        impl.split(curve, t, out1, out2);
+    public static void cut(Curve curve, double t, Curve out1, Curve out2) {
+        impl.cut(curve, t, out1, out2);
     }
 
     /**
@@ -341,8 +341,8 @@ public final class Bezier2D {
      * @throws IndexOutOfBoundsException 索引越界
      * @throws IllegalStateException     控制点数不足
      */
-    public static void divide(Curve curve, int idx, Curve out1, Curve out2) {
-        impl.divide(curve, idx, out1, out2);
+    public static void split(Curve curve, int idx, Curve out1, Curve out2) {
+        impl.split(curve, idx, out1, out2);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -622,8 +622,8 @@ public final class Bezier2D {
 
         Curve join(Curve left, Curve right);
 
-        void split(Curve curve, double t, Curve out1, Curve out2);
-        void divide(Curve curve, int idx, Curve out1, Curve out2);
+        void cut(Curve curve, double t, Curve out1, Curve out2);
+        void split(Curve curve, int idx, Curve out1, Curve out2);
 
         // ─── 重构 / 拟合 ─────────────────────────────────────
 

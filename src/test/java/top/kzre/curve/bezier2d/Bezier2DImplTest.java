@@ -114,7 +114,7 @@ class Bezier2DImplTest {
     }
 
     @Test
-    void divide() {
+    void split() {
         // 创建一个4个控制点的曲线
         List<ControlPoint> pts = Arrays.asList(
                 ControlPoint.builder().x(0).y(0).build(),
@@ -124,7 +124,7 @@ class Bezier2DImplTest {
         Curve multi = new Curve(pts, false);
         Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
         Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
-        impl.divide(multi, 2, left, right);
+        impl.split(multi, 2, left, right);
         // left 应有 3 个锚点 (0,1,2)
         assertEquals(3, left.getPoints().size());
         // right 应有 2 个锚点 (2,3)
@@ -137,13 +137,13 @@ class Bezier2DImplTest {
     }
 
     @Test
-    void split() {
+    void cut() {
         Curve left = new Curve(Arrays.asList(
                 new ControlPoint(), new ControlPoint()), false);
         Curve right = new Curve(Arrays.asList(
                 new ControlPoint(), new ControlPoint()), false);
         double splitT = 0.5;
-        impl.split(curve, splitT, left, right);
+        impl.cut(curve, splitT, left, right);
 
         // 左段局部参数 u ∈ [0,1] 对应原曲线 t = u * splitT
         for (int i = 0; i <= 10; i++) {
@@ -407,12 +407,12 @@ class Bezier2DImplTest {
     }
 
     @Test
-    void splitPrecision() {
+    void cutPrecision() {
         // 分割后，左右段分别采样与原曲线对应区间比较
         Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
         Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
         double splitT = 0.5;
-        impl.split(curve, splitT, left, right);
+        impl.cut(curve, splitT, left, right);
 
         // 左段均匀采样 500 点，与对应原曲线 t 比较
         double maxErr = 0;

@@ -257,7 +257,7 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     // ═══════════════════════════════════════════════════════════
 
     @Override
-    public void split(Curve curve, double t, Curve out1, Curve out2) {
+    public void cut(Curve curve, double t, Curve out1, Curve out2) {
         if (t <= 0) {
             out1.setPoints(new ArrayList<>()); out1.setClosed(false);
             out2.setPoints(copyControlPoints(curve.getPoints())); out2.setClosed(curve.isClosed());
@@ -322,7 +322,7 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     }
 
     @Override
-    public void divide(Curve curve, int idx, Curve out1, Curve out2) {
+    public void split(Curve curve, int idx, Curve out1, Curve out2) {
         List<ControlPoint> points = curve.getPoints();
         int n = points.size();
         if (idx < 0 || idx >= n) {
@@ -557,7 +557,7 @@ public class Bezier2DImpl implements Bezier2D.Spec {
 
                 Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
                 Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
-                split(remaining, localT, left, right);
+                cut(remaining, localT, left, right);
 
                 List<ControlPoint> leftPts = left.getPoints();
                 if (leftPts.isEmpty()) break;
