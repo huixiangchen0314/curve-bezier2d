@@ -2,8 +2,9 @@ package top.kzre.curve.bezier2d;
 
 import lombok.*;
 
-@NoArgsConstructor
+import static java.util.Objects.requireNonNull;
 
+@NoArgsConstructor
 @Builder
 @ToString
 @Getter
@@ -14,58 +15,43 @@ public final class ControlPoint {
     private double dy1;
     private double dx2;   // 出切向量：从该点指向后一个内部控制点
     private double dy2;
-    private boolean g1;
-    public ControlPoint(double x, double y, double dx1, double dy1, double dx2, double dy2, boolean g1) {
+
+    /**
+     * 连续性约束。
+     * <ul>
+     *   <li>{@code null}        — 无约束（角点），两侧手柄独立</li>
+     *   <li>{@link Continuity#G1} — 方向共线（大小独立）</li>
+     *   <li>{@link Continuity#C1} — 方向共线 + 大小相等</li>
+     *   <li>{@link Continuity#G2} — G1 + 曲率连续（曲率部分需曲线级处理）</li>
+     *   <li>{@link Continuity#C2} — C1 + 二阶连续（同上）</li>
+     * </ul>
+     */
+    @Builder.Default
+    private Continuity continuity = Continuity.C1;
+
+    public ControlPoint(double x, double y,
+                        double dx1, double dy1,
+                        double dx2, double dy2,
+                        Continuity continuity) {
         this.x = x;
         this.y = y;
         this.dx1 = dx1;
         this.dy1 = dy1;
         this.dx2 = dx2;
         this.dy2 = dy2;
-        this.g1 = g1;
-        applyConstraints();
+        this.continuity = requireNonNull(continuity);
     }
 
     // 包内部可变方法，使用前必须保证所有权
     public ControlPoint setX(double x) { this.x = x; return this; }
     public ControlPoint setY(double y) { this.y = y; return this; }
-    public ControlPoint setDx1(double dx1) {
-         this.dx1 = dx1;
-        return this;
-    }
-    public ControlPoint setDy1(double dy1) {
-         this.dy1 = dy1;
-        return this;
-    }
-    public ControlPoint setDx2(double dx2) {
-         this.dx2 = dx2;
-        return this;
-    }
-    public ControlPoint setDy2(double dy2) {
-         this.dy2 = dy2;
-        return this;
-    }
-
-    // 包内部调用
-    public ControlPoint applyConstraints() {
-        if (g1) {
-            double lenIn = Math.hypot(dx1, dy1);
-            double lenOut = Math.hypot(dx2, dy2);
-            if (lenOut < 1e-12) { dx1 = 0; dy1 = 0;
-                return this; }
-            if (lenIn < 1e-12) {
-                dx1 = -dx2;
-                dy1 = -dy2;
-            } else {
-                double factor = lenIn / lenOut;
-                dx1 = -dx2 * factor;
-                dy1 = -dy2 * factor;
-            }
-        }
-        return this;
-    }
+    public ControlPoint setDx1(double dx1) { this.dx1 = dx1; return this; }
+    public ControlPoint setDy1(double dy1) { this.dy1 = dy1; return this; }
+    public ControlPoint setDx2(double dx2) { this.dx2 = dx2; return this; }
+    public ControlPoint setDy2(double dy2) { this.dy2 = dy2; return this; }
+    public ControlPoint setContinuity(Continuity c) { this.continuity = c; return this; }
 
     public ControlPoint copy() {
-        return new ControlPoint(x, y, dx1, dy1, dx2, dy2, g1);
+        return new ControlPoint(x, y, dx1, dy1, dx2, dy2, continuity);
     }
 }

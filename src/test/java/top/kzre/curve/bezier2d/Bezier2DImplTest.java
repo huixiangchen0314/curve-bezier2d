@@ -587,6 +587,160 @@ class Bezier2DImplTest {
         assertThrows(IllegalArgumentException.class, () -> impl.fit(xs, ys, 1.0, 5));
     }
 
+    // ═══════════════════════════════════════
+    // 连续性约束
+    // ═══════════════════════════════════════
+
+    @Test
+    void controlPoint_defaultContinuity_isC1() {
+        ControlPoint cp = ControlPoint.builder().x(0).y(0).build();
+        assertEquals(Continuity.C1, cp.getContinuity());
+    }
+
+    @Test
+    void controlPoint_nullContinuity_throws() {
+        assertThrows(NullPointerException.class, () ->
+                ControlPoint.builder().x(0).y(0).continuity(null).build());
+    }
+
+    @Test
+    void applyConstraints_C1() {
+        // 一个 C1 连续点：出切 (10, 0)，入切应为 (-10, 0)
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(0)
+                .dx1(3).dy1(3)        // 故意给错的值
+                .continuity(Continuity.C1)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-20).y(0).build(),
+                cp,
+                ControlPoint.builder().x(20).y(0).build()), false);
+        c.applyConstraints();
+
+        assertEquals(-10.0, cp.getDx1(), 1e-9);
+        assertEquals(0.0,   cp.getDy1(), 1e-9);
+        assertEquals(10.0,  cp.getDx2(), 1e-9);
+        assertEquals(0.0,   cp.getDy2(), 1e-9);
+    }
+
+    @Test
+    void applyConstraints_G1_preservesInLengthRatio() {
+        // G1：方向共线，入切长度随出切长度按原比例缩放
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(0)       // 出切长度 = 10
+                .dx1(-5).dy1(0)       // 入切长度 = 5（比例 0.5）
+                .continuity(Continuity.G1)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-20).y(0).build(),
+                cp,
+                ControlPoint.builder().x(20).y(0).build()), false);
+        c.applyConstraints();
+
+        // 入切方向 = -出切方向；长度比保持 0.5
+        assertEquals(-5.0, cp.getDx1(), 1e-9);
+        assertEquals(0.0,  cp.getDy1(), 1e-9);
+    }
+
+    @Test
+    void applyConstraints_G1_zeroOut_setsInToZero() {
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(0).dy2(0)
+                .dx1(5).dy1(5)
+                .continuity(Continuity.G1)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-20).y(0).build(),
+                cp,
+                ControlPoint.builder().x(20).y(0).build()), false);
+        c.applyConstraints();
+
+        assertEquals(0.0, cp.getDx1(), 1e-9);
+        assertEquals(0.0, cp.getDy1(), 1e-9);
+    }
+
+    @Test
+    void applyConstraints_G2_equalizesCurvature() {
+        // 构造一条已知曲率的曲线，应用 G2 后左右曲率应相等
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(0)
+                .dx1(-10).dy1(0)
+                .continuity(Continuity.G2)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-30).y(0).dx2(10).dy2(0).build(),
+                cp,
+                ControlPoint.builder().x(30).y(0).dx1(-10).dy1(0).build()), false);
+
+        c.applyConstraints();
+
+        // 左右段在 cp 处的曲率应近似相等
+        double curvatureLeft  = Math.abs(impl.curvature(
+                new Curve(Arrays.asList(c.getPoints().get(0), cp), false), 1.0));
+        double curvatureRight = Math.abs(impl.curvature(
+                new Curve(Arrays.asList(cp, c.getPoints().get(2)), false), 0.0));
+        assertEquals(curvatureLeft, curvatureRight, 1e-6);
+    }
+
+    @Test
+    void applyConstraints_C2_throws() {
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(0)
+                .dx1(-10).dy1(0)
+                .continuity(Continuity.C2)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-20).y(0).build(),
+                cp,
+                ControlPoint.builder().x(20).y(0).build()), false);
+
+        assertThrows(UnsupportedOperationException.class, c::applyConstraints);
+    }
+
+    @Test
+    void applyConstraints_NONE_keepsHandles() {
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(0)
+                .dx1(3).dy1(3)
+                .continuity(Continuity.NONE)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-20).y(0).build(),
+                cp,
+                ControlPoint.builder().x(20).y(0).build()), false);
+        c.applyConstraints();
+
+        // NONE 不做任何修改
+        assertEquals(3.0,  cp.getDx1(), 1e-9);
+        assertEquals(3.0,  cp.getDy1(), 1e-9);
+        assertEquals(10.0, cp.getDx2(), 1e-9);
+        assertEquals(0.0,  cp.getDy2(), 1e-9);
+    }
+
+    @Test
+    void applyConstraints_doesNotAffectGeometryWithoutExplicitCall() {
+        // 构造一个 C1 点，但不调 applyConstraints——几何应保持构造时状态
+        ControlPoint cp = ControlPoint.builder()
+                .x(0).y(0)
+                .dx2(10).dy2(0)
+                .dx1(3).dy1(3)        // 与 C1 不符
+                .continuity(Continuity.C1)
+                .build();
+        Curve c = new Curve(Arrays.asList(
+                ControlPoint.builder().x(-20).y(0).build(),
+                cp,
+                ControlPoint.builder().x(20).y(0).build()), false);
+
+        // 未调 applyConstraints——dx1/dy1 保持 3/3
+        assertEquals(3.0, cp.getDx1(), 1e-9);
+        assertEquals(3.0, cp.getDy1(), 1e-9);
+    }
 }
 
 
