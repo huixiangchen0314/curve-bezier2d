@@ -214,7 +214,7 @@ class Bezier2DImplTest {
         Pair origMid   = impl.eval(curve, 0.5);
         Pair origEnd   = impl.eval(curve, 1.0);
 
-        impl.insertPoint(copy, 0.5);
+        copy = impl.insertPoint(copy, 0.5);
         assertEquals(3, copy.getPoints().size());
 
         // 用 closestPoint 验证形状未变
@@ -232,7 +232,7 @@ class Bezier2DImplTest {
                 ControlPoint.builder().x(30).y(20).build(),
                 ControlPoint.builder().x(40).y(0).build());
         Curve multi = new Curve(pts, false);
-        impl.deletePoint(multi, 1); // 删除第二个点
+        multi=  impl.deletePoint(multi, 1); // 删除第二个点
         assertEquals(3, multi.getPoints().size());
         // 形状可能有轻微变化，但端点不变
         Pair p0 = impl.eval(multi, 0.0);
@@ -327,7 +327,7 @@ class Bezier2DImplTest {
         Pair origEnd   = impl.eval(curve, 1.0);
 
         // 增加点数 2→4，形状不变
-        impl.reform(morePoints, 4);
+        morePoints =  impl.reform(morePoints, 4);
         assertEquals(4, morePoints.getPoints().size());
         // 直接 eval 在 t=0.5 应精确等于原中点
         Pair newMid = impl.eval(morePoints, 0.5);
@@ -342,7 +342,7 @@ class Bezier2DImplTest {
         assertEquals(origEnd.getY(), newEnd.getY(), 1e-9);
 
         // 减少点数 4→2，通过拟合近似，起终点精确，中点误差允许稍大
-        impl.reform(morePoints, 2);
+        morePoints = impl.reform(morePoints, 2);
         assertEquals(2, morePoints.getPoints().size());
         assertTrue(impl.closestPoint(morePoints, origStart).getDistance() < 1e-6);
         assertTrue(impl.closestPoint(morePoints, origEnd).getDistance() < 1e-6);
@@ -443,7 +443,7 @@ class Bezier2DImplTest {
     void reformPrecision() {
         // 增加点数后形状保持不变
         Curve morePoints = new Curve(Arrays.asList(curve.getPoints().get(0).copy(), curve.getPoints().get(1).copy()), false);
-        impl.reform(morePoints, 10); // 增加到10个控制点
+        morePoints =  impl.reform(morePoints, 10); // 增加到10个控制点
         assertEquals(10, morePoints.getPoints().size());
         Pair[] origSample = impl.sample(curve, 500);
         double maxErr = 0;

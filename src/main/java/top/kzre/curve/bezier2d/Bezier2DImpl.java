@@ -280,9 +280,9 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     }
 
     @Override
-    public void insertPoint(Curve curve, double t) {
+    public Curve insertPoint(Curve curve, double t) {
         List<ControlPoint> points = curve.getPoints();
-        int segCount = points.size()-1;
+        int segCount = points.size() - 1;
         if (segCount <= 0) throw new IllegalArgumentException("Curve has no segments");
 
         IndexedSegment is = curve.segmentAt(t);
@@ -290,16 +290,16 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         double localT = is.getLocal();
 
         Segment seg = is.getSegment();
-        Segment leftSeg = new Segment(null,null,null,null);
-        Segment rightSeg = new Segment(null,null,null,null);
+        Segment leftSeg  = new Segment(null, null, null, null);
+        Segment rightSeg = new Segment(null, null, null, null);
         Segments.split(seg, localT, leftSeg, rightSeg);
 
         double mx = leftSeg.getD().getX(), my = leftSeg.getD().getY();
 
-        Pair leftDeriv = Segments.deriv(leftSeg, 1.0);
+        Pair leftDeriv  = Segments.deriv(leftSeg, 1.0);
         Pair rightDeriv = Segments.deriv(rightSeg, 0.0);
-        double dxOut = rightDeriv.getX()/3.0, dyOut = rightDeriv.getY()/3.0;   // 出切
-        double dxIn  = -leftDeriv.getX()/3.0,  dyIn  = -leftDeriv.getY()/3.0;  // 入切反向
+        double dxOut =  rightDeriv.getX() / 3.0, dyOut =  rightDeriv.getY() / 3.0;
+        double dxIn  = -leftDeriv.getX()  / 3.0, dyIn  = -leftDeriv.getY()  / 3.0;
 
         ControlPoint newAnchor = ControlPoint.builder()
                 .x(mx).y(my)
@@ -308,59 +308,70 @@ public class Bezier2DImpl implements Bezier2D.Spec {
                 .g1(true).build();
 
         ControlPoint origStart = points.get(idx).copy();
-        ControlPoint origEnd   = points.get(idx+1).copy();
+        ControlPoint origEnd   = points.get(idx + 1).copy();
 
         Pair startDeriv = Segments.deriv(leftSeg, 0.0);
-        origStart.setDx2(startDeriv.getX()/3.0);
-        origStart.setDy2(startDeriv.getY()/3.0);
+        origStart.setDx2(startDeriv.getX() / 3.0);
+        origStart.setDy2(startDeriv.getY() / 3.0);
 
         Pair endDeriv = Segments.deriv(rightSeg, 1.0);
-        origEnd.setDx1(-endDeriv.getX()/3.0);   // 入切反向
-        origEnd.setDy1(-endDeriv.getY()/3.0);
+        origEnd.setDx1(-endDeriv.getX() / 3.0);
+        origEnd.setDy1(-endDeriv.getY() / 3.0);
 
-        List<ControlPoint> newPoints = new ArrayList<>(points.size()+1);
-        for (int i=0; i<idx; i++) newPoints.add(points.get(i).copy());
+        List<ControlPoint> newPoints = new ArrayList<>(points.size() + 1);
+        for (int i = 0; i < idx; i++) newPoints.add(points.get(i).copy());
         newPoints.add(origStart);
         newPoints.add(newAnchor);
         newPoints.add(origEnd);
-        for (int i=idx+2; i<points.size(); i++)
-        {
+        for (int i = idx + 2; i < points.size(); i++) {
             newPoints.add(points.get(i).copy());
         }
-        curve.setPoints(newPoints);
+        return new Curve(newPoints, curve.isClosed());
     }
 
     @Override
-    public void deletePoint(Curve curve, int idx) {
-        List<ControlPoint> points = new ArrayList<>(curve.getPoints());
+    public Curve deletePoint(Curve curve, int idx) {
+        List<ControlPoint> points = curve.getPoints();
         int n = points.size();
         if (n < 2) throw new IllegalArgumentException("Curve has too few points");
         if (idx < 0 || idx >= n) throw new IndexOutOfBoundsException("Index out of range");
 
-        if (n == 2) return;
-        if (idx == 0) { points.remove(0); return; }
-        if (idx == n-1) { points.remove(n-1); return; }
+        if (n == 2) return curve;   // 无法再删，返回原曲线
 
-        int segCount = n-1;
-        double tStart = (double)(idx-1)/segCount, tEnd = (double)(idx+1)/segCount;
+        if (idx == 0) {
+            List<ControlPoint> newPoints = new ArrayList<>(n - 1);
+            for (int i = 1; i < n; i++) newPoints.add(points.get(i).copy());
+            return new Curve(newPoints, curve.isClosed());
+        }
+        if (idx == n - 1) {
+            List<ControlPoint> newPoints = new ArrayList<>(n - 1);
+            for (int i = 0; i < n - 1; i++) newPoints.add(points.get(i).copy());
+            return new Curve(newPoints, curve.isClosed());
+        }
+
+        // 中间点删除：局部拟合
+        int segCount = n - 1;
+        double tStart = (double)(idx - 1) / segCount;
+        double tEnd   = (double)(idx + 1) / segCount;
         int samples = 20;
         double[] xs = new double[samples], ys = new double[samples];
-        for (int i=0; i<samples; i++) {
-            double t = tStart + (tEnd-tStart)*i/(samples-1);
+        for (int i = 0; i < samples; i++) {
+            double t = tStart + (tEnd - tStart) * i / (samples - 1);
             Pair p = eval(curve, t);
-            xs[i]=p.getX(); ys[i]=p.getY();
+            xs[i] = p.getX();
+            ys[i] = p.getY();
         }
 
         Curve fitted = CurveFitter.fit(xs, ys, 5.0, 1);
         List<ControlPoint> fittedPoints = fitted.getPoints();
-        if (fittedPoints.size() != 2) return;
+        if (fittedPoints.size() != 2) return curve;   // 拟合失败，返回原曲线
 
-        List<ControlPoint> newPoints = new ArrayList<>(n-1);
-        for (int i=0; i<idx-1; i++) newPoints.add(points.get(i).copy());
+        List<ControlPoint> newPoints = new ArrayList<>(n - 1);
+        for (int i = 0; i < idx - 1; i++) newPoints.add(points.get(i).copy());
         newPoints.add(fittedPoints.get(0).copy());
         newPoints.add(fittedPoints.get(1).copy());
-        for (int i=idx+2; i<n; i++) newPoints.add(points.get(i).copy());
-        curve.setPoints(newPoints);
+        for (int i = idx + 2; i < n; i++) newPoints.add(points.get(i).copy());
+        return new Curve(newPoints, curve.isClosed());
     }
 
     @Override
@@ -424,18 +435,23 @@ public class Bezier2DImpl implements Bezier2D.Spec {
     }
 
     @Override
-    public void reform(Curve curve, int count) {
+    public Curve reform(Curve curve, int count) {
         int current = curve.getPoints().size();
         if (count < 2) throw new IllegalArgumentException("At least 2 control points required");
-        if (count == current) return;
+        if (count == current) return curve;
 
         if (count > current) {
             int targetSegs = count - 1;
             List<ControlPoint> allPoints = new ArrayList<>();
-            Curve remaining = new Curve(new ArrayList<>(curve.getPoints()), curve.isClosed());
+
+            // remaining 使用深拷贝——避免与原 curve 共享 ControlPoint
+            List<ControlPoint> initialPoints = new ArrayList<>(current);
+            for (ControlPoint p : curve.getPoints()) initialPoints.add(p.copy());
+            Curve remaining = new Curve(initialPoints, curve.isClosed());
+
             double prevT = 0.0;
             for (int i = 1; i <= targetSegs; i++) {
-                double nextT = (double) i / targetSegs;
+                double nextT  = (double) i / targetSegs;
                 double localT = (nextT - prevT) / (1 - prevT);
 
                 if (localT <= 0.0 || localT >= 1.0) {
@@ -443,14 +459,13 @@ public class Bezier2DImpl implements Bezier2D.Spec {
                     if (allPoints.isEmpty()) {
                         allPoints.addAll(rpts);
                     } else {
-                        // 替换最后一个点（它可能是上一段的终点，手柄已被 split 更新）
                         allPoints.remove(allPoints.size() - 1);
                         allPoints.addAll(rpts);
                     }
                     break;
                 }
 
-                Curve left = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
+                Curve left  = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
                 Curve right = new Curve(Arrays.asList(new ControlPoint(), new ControlPoint()), false);
                 split(remaining, localT, left, right);
 
@@ -460,27 +475,27 @@ public class Bezier2DImpl implements Bezier2D.Spec {
                 if (allPoints.isEmpty()) {
                     allPoints.addAll(leftPts);
                 } else {
-                    // 最后一个点（上一段的终点）的手柄已被 split 更新，替换之
                     allPoints.remove(allPoints.size() - 1);
                     allPoints.addAll(leftPts);
                 }
                 remaining = right;
                 prevT = nextT;
             }
-            curve.setPoints(allPoints);
+            return new Curve(allPoints, curve.isClosed());
         } else {
             int targetSeg = count - 1;
-            int samples = Math.max(8, targetSeg*4);
+            int samples = Math.max(8, targetSeg * 4);
             double[] xs = new double[samples], ys = new double[samples];
-            for (int i=0; i<samples; i++) {
-                double t = (double)i/(samples-1);
+            for (int i = 0; i < samples; i++) {
+                double t = (double) i / (samples - 1);
                 Pair p = eval(curve, t);
-                xs[i]=p.getX(); ys[i]=p.getY();
+                xs[i] = p.getX();
+                ys[i] = p.getY();
             }
             Curve fitted = CurveFitter.fit(xs, ys, 0.0, targetSeg);
             List<ControlPoint> newPts = new ArrayList<>();
             for (ControlPoint cp : fitted.getPoints()) newPts.add(cp.copy());
-            curve.setPoints(newPts);
+            return new Curve(newPts, curve.isClosed());
         }
     }
 

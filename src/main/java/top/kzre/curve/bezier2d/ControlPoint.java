@@ -25,8 +25,9 @@ public final class ControlPoint {
         this.g1 = g1;
         applyConstraints();
     }
+
     // 包内部可变方法，使用前必须保证所有权
-     public ControlPoint setX(double x) { this.x = x; return this; }
+    public ControlPoint setX(double x) { this.x = x; return this; }
     public ControlPoint setY(double y) { this.y = y; return this; }
     public ControlPoint setDx1(double dx1) {
          this.dx1 = dx1;

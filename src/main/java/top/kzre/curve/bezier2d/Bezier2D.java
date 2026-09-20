@@ -7,6 +7,30 @@ public final class Bezier2D {
 
     private Bezier2D() {}
 
+    /**
+     * 全局归一化参数 t → 段索引。
+     * t ∈ [0, 1]，t = 1.0 归入末段。
+     * t 越界抛 IndexOutOfBoundsException。
+     *
+     * @param curve 曲线
+     * @param t     全局归一化参数
+     * @return 段索引，范围 [0, segCount)
+     */
+    public static int segmentIndex(Curve curve, double t) {
+        if (t < 0.0 || t > 1.0) {
+            throw new IndexOutOfBoundsException(
+                    "t " + t + " out of [0, 1]");
+        }
+        int segCount = curve.getSegmentCount();
+        if (segCount <= 0) {
+            throw new IllegalStateException("curve has no segments");
+        }
+        if (t >= 1.0) return segCount - 1;
+        return (int) Math.floor(t * segCount);
+    }
+
+
+
     public static Pair eval(Curve curve, double t) {
         return impl.eval(curve, t);
     }
@@ -43,16 +67,16 @@ public final class Bezier2D {
         return impl.join(left, right);
     }
 
-    public static void insertPoint(Curve curve, double t) {
-        impl.insertPoint(curve, t);
+    public static Curve insertPoint(Curve curve, double t) {
+        return impl.insertPoint(curve, t);
     }
 
-    public static void deletePoint(Curve curve, int idx) {
-        impl.deletePoint(curve, idx);
+    public static Curve deletePoint(Curve curve, int idx) {
+        return impl.deletePoint(curve, idx);
     }
 
-    public static void reform(Curve curve, int count) {
-        impl.reform(curve, count);
+    public static Curve reform(Curve curve, int count) {
+        return impl.reform(curve, count);
     }
 
     public static ClosestPointResult closestPoint(Curve curve, Pair point) {
@@ -142,12 +166,16 @@ public final class Bezier2D {
 
          Curve join(Curve left, Curve right);
 
-         void insertPoint(Curve curve, double t);
 
-         void deletePoint(Curve curve, int idx);
-         void reform(Curve curve, int count);
+        Curve insertPoint(Curve curve, double t);
 
-         ClosestPointResult closestPoint(Curve curve, Pair point);
+
+        Curve deletePoint(Curve curve, int idx);
+
+
+        Curve reform(Curve curve, int count);
+
+        ClosestPointResult closestPoint(Curve curve, Pair point);
 
         /** 曲线反向，返回新 Curve */
         Curve reverse(Curve curve);

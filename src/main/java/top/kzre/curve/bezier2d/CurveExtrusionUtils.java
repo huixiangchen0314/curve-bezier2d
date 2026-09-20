@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+@Deprecated
 public final class CurveExtrusionUtils {
 
     private CurveExtrusionUtils() {}
