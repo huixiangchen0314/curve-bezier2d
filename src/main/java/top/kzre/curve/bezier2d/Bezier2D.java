@@ -569,6 +569,38 @@ public final class Bezier2D {
         return impl.normal(curve, t);
     }
 
+    /**
+     * 焊接两个相邻控制点。
+     *
+     * <p>位置和连续性取自 {@code idxActive}；入切取自两点中的前点，
+     * 出切取自后点。两点之间的手柄（前点的出切、后点的入切）消失。
+     *
+     * <p>要求 {@code |idxActive - idxPassive| == 1}。焊接后控制点数 -1。
+     *
+     * @param curve      原曲线
+     * @param idxActive  主动点索引（位置、连续性以它为准）
+     * @param idxPassive 被动点索引（被合并掉）
+     * @return 焊接后的新曲线
+     */
+    public static Curve weldAdjacent(Curve curve, int idxActive, int idxPassive) {
+        return impl.weldAdjacent(curve, idxActive, idxPassive);
+    }
+
+    /**
+     * 焊接两条曲线的端点，合并为一条曲线。
+     *
+     * <p>调用方需保证 left 的末点和 right 的首点是被 weld 的两个点。
+     * 入切取左末点的入切，出切取右首点的出切；位置和连续性取自 active。
+     *
+     * @param left                  左曲线
+     * @param right                 右曲线
+     * @param activeIsLeftEndpoint  true = active 是左末点；false = active 是右首点
+     * @return 焊接后的新曲线，非闭合
+     */
+    public static Curve weldJoin(Curve left, Curve right, boolean activeIsLeftEndpoint) {
+        return impl.weldJoin(left, right, activeIsLeftEndpoint);
+    }
+
     // ═══════════════════════════════════════════════════════════
     // Spec 接口
     // ═══════════════════════════════════════════════════════════
@@ -642,5 +674,10 @@ public final class Bezier2D {
 
         Curve offset(Curve curve, double distance);
         Curve offsetRange(Curve curve, int fromSeg, int toSeg, double distance);
+
+
+        Curve weldAdjacent(Curve curve, int idxActive, int idxPassive);
+        Curve weldJoin(Curve left, Curve right, boolean activeIsLeftEndpoint);
+
     }
 }

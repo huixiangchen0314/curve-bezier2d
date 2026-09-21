@@ -727,6 +727,107 @@ public class Bezier2DImpl implements Bezier2D.Spec {
         return new Curve(all, curve.isClosed());
     }
 
+    @Override
+    public Curve weldAdjacent(Curve curve, int idxActive, int idxPassive) {
+        List<ControlPoint> points = curve.getPoints();
+        int n = points.size();
+        boolean closed = curve.isClosed();
+
+        if (n < 2) {
+            throw new IllegalArgumentException("curve has too few points");
+        }
+
+        // 相邻性检查：闭合曲线首尾也算相邻
+        int diff = Math.abs(idxActive - idxPassive);
+        boolean adjacent = (diff == 1) || (closed && diff == n - 1);
+        if (!adjacent) {
+            throw new IllegalArgumentException(
+                    "weld requires adjacent indices, got "
+                            + idxActive + " and " + idxPassive);
+        }
+
+        // 闭合曲线 weld 后至少剩 3 个点（2 段）
+        if (closed && n < 4) {
+            throw new IllegalStateException(
+                    "closed curve must have at least 4 points to weld "
+                            + "(would degenerate to " + (n - 1) + " points)");
+        }
+
+        // 前点 / 后点——按曲线正向判定
+        //   普通相邻 (lo, hi)：前 = lo，后 = hi
+        //   闭合首尾 (0, n-1)：正向顺序是 n-1 → 0，前 = n-1，后 = 0
+        int prevIdx, nextIdx;
+        if (closed && diff == n - 1) {
+            prevIdx = n - 1;
+            nextIdx = 0;
+        } else {
+            prevIdx = Math.min(idxActive, idxPassive);
+            nextIdx = Math.max(idxActive, idxPassive);
+        }
+        ControlPoint prev = points.get(prevIdx);
+        ControlPoint next = points.get(nextIdx);
+        ControlPoint active = points.get(idxActive);
+
+        // 焊接点：位置 + 连续性取 active；入切取前点，出切取后点
+        ControlPoint merged = ControlPoint.builder()
+                .x(active.getX())
+                .y(active.getY())
+                .dx1(prev.getDx1())
+                .dy1(prev.getDy1())
+                .dx2(next.getDx2())
+                .dy2(next.getDy2())
+                .continuity(active.getContinuity())
+                .build();
+
+        // 逐点保留：跳过 passive，active 位置放 merged
+        List<ControlPoint> newPoints = new ArrayList<>(n - 1);
+        for (int i = 0; i < n; i++) {
+            if (i == idxPassive) continue;
+            if (i == idxActive) {
+                newPoints.add(merged);
+            } else {
+                newPoints.add(points.get(i).copy());
+            }
+        }
+
+        return new Curve(newPoints, closed);
+    }
+
+    @Override
+    public Curve weldJoin(Curve left, Curve right, boolean activeIsLeftEndpoint) {
+        if (left.isClosed()) {
+            throw new IllegalArgumentException("cannot weld closed curve (left)");
+        }
+        if (right.isClosed()) {
+            throw new IllegalArgumentException("cannot weld closed curve (right)");
+        }
+        List<ControlPoint> lp = left.getPoints();
+        List<ControlPoint> rp = right.getPoints();
+        if (lp.isEmpty() || rp.isEmpty()) {
+            throw new IllegalArgumentException("cannot weld empty curves");
+        }
+
+        ControlPoint leftEnd    = lp.get(lp.size() - 1);
+        ControlPoint rightStart = rp.get(0);
+        ControlPoint active     = activeIsLeftEndpoint ? leftEnd : rightStart;
+
+        ControlPoint merged = ControlPoint.builder()
+                .x(active.getX())
+                .y(active.getY())
+                .dx1(leftEnd.getDx1())
+                .dy1(leftEnd.getDy1())
+                .dx2(rightStart.getDx2())
+                .dy2(rightStart.getDy2())
+                .continuity(active.getContinuity())
+                .build();
+
+        List<ControlPoint> all = new ArrayList<>();
+        for (int i = 0; i < lp.size() - 1; i++) all.add(lp.get(i).copy());
+        all.add(merged);
+        for (int i = 1; i < rp.size(); i++) all.add(rp.get(i).copy());
+
+        return new Curve(all, false);
+    }
     // ═══════════════════════════════════════════════════════════
     // 内部
     // ═══════════════════════════════════════════════════════════
